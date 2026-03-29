@@ -1498,6 +1498,7 @@ async def main():
 
         # User harakatini log guruhiga yuborish
         await log_action(uid, uname, full_name, f"✉️ {text[:150]}")
+        log.info(f"on_msg: uid={uid}, adm={adm}, text={repr(text[:80])}")
 
         # Admin oraliq holat
         if astate.get("step") == "wait_phone":
