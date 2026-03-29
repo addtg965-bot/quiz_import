@@ -2206,7 +2206,7 @@ async def main():
                                 "💳 To'lovlar", "📤 Sessiya yuklash",
                                 "⬇️ DB yuklash", "⬆️ DB yuklash (yangi)",
                                 "👀 Faol foydalanuvchilar", "💸 Userga pul yuborish",
-                                "💸 Yana yuborish"]
+                                "💸 Yana yuborish", "📢 Barchaga xabar", "📨 ID ga xabar"]
     ))
     async def admin_btns(event):
         uid = event.sender_id
