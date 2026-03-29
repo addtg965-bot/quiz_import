@@ -1,0 +1,346 @@
+2026-03-29 14:09:48,391 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:09:50,621 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:09:51,427 | INFO | AIQuizBot | Bot ulandi!
+2026-03-29 14:09:51,468 | INFO | AIQuizBot | DB tayyor: data/bot.db | Jami users: 0 ta
+2026-03-29 14:09:51,509 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:09:53,051 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:09:53,878 | INFO | telethon.client.users | Phone migrated to 4
+2026-03-29 14:09:54,036 | INFO | telethon.client.telegrambaseclient | Reconnecting to new data center 4
+2026-03-29 14:09:54,240 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.51:443/TcpFull...
+2026-03-29 14:09:54,242 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:09:54,243 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:09:55,955 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:11:02,850 | ERROR | AIQuizBot | Ulanmadi +923550924706: 
+2026-03-29 14:11:02,852 | WARNING | AIQuizBot | ⚠️ Notify akkaunt topilmadi: +998934897111 — /notify_ulash buyrug'ini ishlating
+2026-03-29 14:11:02,854 | INFO | AIQuizBot | ✅ AI Quiz Bot tayyor! 0 ta akkaunt.
+2026-03-29 14:11:02,855 | INFO | AIQuizBot | Navbat ishlovchisi ishga tushdi
+2026-03-29 14:11:02,857 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.51:443/TcpFull...
+2026-03-29 14:11:02,868 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:11:47,047 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:11:47,152 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:11:47,711 | INFO | AIQuizBot | Bot ulandi!
+2026-03-29 14:11:47,716 | INFO | AIQuizBot | DB tayyor: data/bot.db | Jami users: 0 ta
+2026-03-29 14:11:47,757 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:11:49,157 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:11:49,704 | INFO | telethon.client.users | Phone migrated to 4
+2026-03-29 14:11:49,811 | INFO | telethon.client.telegrambaseclient | Reconnecting to new data center 4
+2026-03-29 14:11:49,920 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.51:443/TcpFull...
+2026-03-29 14:11:49,921 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:11:49,921 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:11:51,818 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:12:12,446 | INFO | AIQuizBot | Sessiya DB ga saqlandi: +923557517418
+2026-03-29 14:12:12,447 | INFO | AIQuizBot | Quiz akkaunt ulandi: +923557517418
+2026-03-29 14:12:12,448 | WARNING | AIQuizBot | ⚠️ Notify akkaunt topilmadi: +998934897111 — /notify_ulash buyrug'ini ishlating
+2026-03-29 14:12:12,449 | INFO | AIQuizBot | ✅ AI Quiz Bot tayyor! 1 ta akkaunt.
+2026-03-29 14:12:12,449 | INFO | AIQuizBot | Navbat ishlovchisi ishga tushdi
+2026-03-29 14:12:21,061 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:12:47,024 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:12:50,596 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:13:04,110 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:13:46,915 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:13:49,214 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:14:16,210 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:14:25,848 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:06,904 | INFO | AIQuizBot | Fayl keldi: user=7878916781
+2026-03-29 14:15:07,023 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:07,150 | INFO | AIQuizBot | Fayl yuklanmoqda: user=7878916781
+2026-03-29 14:15:07,151 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:15:09,527 | INFO | AIQuizBot | Fayl yuklandi: 462848 bayt, user=7878916781
+2026-03-29 14:15:09,527 | INFO | AIQuizBot | Fayl: name=30.db, mime=application/binary, user=7878916781
+2026-03-29 14:15:09,529 | INFO | AIQuizBot | TXT o'qildi: 459232 belgi
+2026-03-29 14:15:09,542 | INFO | AIQuizBot | Parse natija: 27 savol, user=7878916781
+2026-03-29 14:15:09,545 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 27 savol, user=7878916781
+2026-03-29 14:15:10,051 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:15:12,164 | INFO | AIQuizBot | DB zaxira: data/bot.db.backup
+2026-03-29 14:15:12,289 | INFO | AIQuizBot | DB yangilandi: admin=7878916781, size=462848
+2026-03-29 14:15:16,080 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:22,395 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:30,432 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:32,455 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:34,176 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:15:37,602 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:19,290 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:22,941 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:26,140 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:31,242 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:31,522 | INFO | AIQuizBot | Admin bonus: 7878916781 → 6904259496, 1000 so'm
+2026-03-29 14:16:37,782 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:40,411 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:44,181 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:44,439 | INFO | AIQuizBot | Admin bonus: 7878916781 → 6904259496, -500 so'm
+2026-03-29 14:16:46,196 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:16:59,721 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:03,513 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:05,363 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:07,723 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:08,874 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:10,132 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:12,763 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:26,223 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:17:28,824 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:18:06,773 | INFO | AIQuizBot | Fayl keldi: user=6904259496
+2026-03-29 14:18:06,887 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:18:07,004 | INFO | AIQuizBot | Fayl yuklanmoqda: user=6904259496
+2026-03-29 14:18:07,005 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:18:07,117 | INFO | telethon.client.downloads | File lives in another DC
+2026-03-29 14:18:07,118 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:18:08,912 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:18:08,913 | INFO | telethon.client.telegrambaseclient | Exporting auth for new borrowed sender in DcOption(id=4, ip_address='149.154.167.92', port=443, ipv6=False, media_only=False, tcpo_only=False, cdn=False, static=False, this_port_only=False, secret=None)
+2026-03-29 14:18:10,337 | INFO | AIQuizBot | Fayl yuklandi: 88598 bayt, user=6904259496
+2026-03-29 14:18:10,337 | INFO | AIQuizBot | Fayl: name=1111111.docx, mime=application/vnd.openxmlformats-officedocument.wordprocessingml.document, user=6904259496
+2026-03-29 14:18:11,131 | INFO | AIQuizBot | DOCX o'qildi: 43472 belgi
+2026-03-29 14:18:11,137 | INFO | AIQuizBot | Parse natija: 195 savol, user=6904259496
+2026-03-29 14:18:11,144 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 195 savol, user=6904259496
+2026-03-29 14:18:17,733 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:18:17,875 | INFO | AIQuizBot | To'lov yaratildi: user=6904259496, karta=9860 3501 4339 8906, summa=11500, id=37
+2026-03-29 14:19:47,719 | INFO | telethon.client.telegrambaseclient | Disconnecting borrowed sender for DC 4
+2026-03-29 14:19:47,720 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.92:443/TcpFull...
+2026-03-29 14:19:47,722 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:20:51,174 | INFO | AIQuizBot | Fayl keldi: user=7878916781
+2026-03-29 14:20:51,289 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:20:51,410 | INFO | AIQuizBot | Fayl yuklanmoqda: user=7878916781
+2026-03-29 14:20:51,411 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:20:51,676 | INFO | AIQuizBot | Fayl yuklandi: 28672 bayt, user=7878916781
+2026-03-29 14:20:51,676 | INFO | AIQuizBot | Fayl: name=userbot_998934897111.session, mime=application/x-sqlite3, user=7878916781
+2026-03-29 14:20:51,677 | INFO | AIQuizBot | TXT o'qildi: 28500 belgi
+2026-03-29 14:20:51,678 | INFO | AIQuizBot | Parse natija: 1 savol, user=7878916781
+2026-03-29 14:20:51,680 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 1 savol, user=7878916781
+2026-03-29 14:20:51,938 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:20:52,238 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:20:52,347 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:20:53,029 | INFO | AIQuizBot | ✅ @humocardbot tinglash aktiv: <telethon.client.telegramclient.TelegramClient object at 0x0000013B65826F90>
+2026-03-29 14:20:53,162 | INFO | AIQuizBot | Sessiya yuklandi va ulandi: +998934897111
+2026-03-29 14:20:53,162 | INFO | AIQuizBot | Sessiya yuklandi: +998934897111, 28672 bayt
+2026-03-29 14:20:58,270 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:21:02,351 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:21:16,342 | INFO | AIQuizBot | Fayl keldi: user=6904259496
+2026-03-29 14:21:16,459 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:21:16,587 | INFO | AIQuizBot | Fayl yuklanmoqda: user=6904259496
+2026-03-29 14:21:16,588 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:21:16,701 | INFO | telethon.client.downloads | File lives in another DC
+2026-03-29 14:21:16,702 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:21:16,808 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:21:17,870 | INFO | AIQuizBot | Fayl yuklandi: 88598 bayt, user=6904259496
+2026-03-29 14:21:17,870 | INFO | AIQuizBot | Fayl: name=1111111.docx, mime=application/vnd.openxmlformats-officedocument.wordprocessingml.document, user=6904259496
+2026-03-29 14:21:18,228 | INFO | AIQuizBot | DOCX o'qildi: 43472 belgi
+2026-03-29 14:21:18,234 | INFO | AIQuizBot | Parse natija: 195 savol, user=6904259496
+2026-03-29 14:21:18,236 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 195 savol, user=6904259496
+2026-03-29 14:21:20,439 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:21:20,581 | INFO | AIQuizBot | To'lov yaratildi: user=6904259496, karta=9860 3566 0573 8935, summa=11500, id=38
+2026-03-29 14:21:21,499 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:22:12,529 | INFO | AIQuizBot | ⏰ 1 ta to'lov muddati o'tdi, bekor qilindi
+2026-03-29 14:22:22,615 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:22:24,421 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:22:34,091 | INFO | AIQuizBot | Fayl keldi: user=6904259496
+2026-03-29 14:22:34,201 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:22:34,320 | INFO | AIQuizBot | Fayl yuklanmoqda: user=6904259496
+2026-03-29 14:22:34,321 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:22:34,434 | INFO | telethon.client.downloads | File lives in another DC
+2026-03-29 14:22:35,310 | INFO | AIQuizBot | Fayl yuklandi: 88598 bayt, user=6904259496
+2026-03-29 14:22:35,311 | INFO | AIQuizBot | Fayl: name=1111111.docx, mime=application/vnd.openxmlformats-officedocument.wordprocessingml.document, user=6904259496
+2026-03-29 14:22:35,751 | INFO | AIQuizBot | DOCX o'qildi: 43472 belgi
+2026-03-29 14:22:35,760 | INFO | AIQuizBot | Parse natija: 195 savol, user=6904259496
+2026-03-29 14:22:35,769 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 195 savol, user=6904259496
+2026-03-29 14:22:39,193 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:23:34,685 | INFO | AIQuizBot | Fayl keldi: user=6904259496
+2026-03-29 14:23:34,816 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:23:35,001 | INFO | AIQuizBot | Fayl yuklanmoqda: user=6904259496
+2026-03-29 14:23:35,002 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:23:35,206 | INFO | telethon.client.downloads | File lives in another DC
+2026-03-29 14:23:35,826 | INFO | AIQuizBot | Fayl yuklandi: 88598 bayt, user=6904259496
+2026-03-29 14:23:35,826 | INFO | AIQuizBot | Fayl: name=1111111.docx, mime=application/vnd.openxmlformats-officedocument.wordprocessingml.document, user=6904259496
+2026-03-29 14:23:36,264 | INFO | AIQuizBot | DOCX o'qildi: 43472 belgi
+2026-03-29 14:23:36,268 | INFO | AIQuizBot | Parse natija: 195 savol, user=6904259496
+2026-03-29 14:23:36,272 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 195 savol, user=6904259496
+2026-03-29 14:23:39,085 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:24:45,118 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:24:47,850 | INFO | telethon.client.telegrambaseclient | Disconnecting borrowed sender for DC 4
+2026-03-29 14:24:47,851 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.92:443/TcpFull...
+2026-03-29 14:24:47,852 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:24:48,767 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:24:54,537 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:25:12,586 | INFO | AIQuizBot | ⏰ 1 ta to'lov muddati o'tdi, bekor qilindi
+2026-03-29 14:28:14,989 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.51:443/TcpFull...
+2026-03-29 14:28:14,992 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:28:14,994 | INFO | telethon.network.mtprotosender | Not disconnecting (already have no connection)
+2026-03-29 14:28:22,174 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:28:22,282 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:28:22,860 | INFO | AIQuizBot | Bot ulandi!
+2026-03-29 14:28:22,865 | INFO | AIQuizBot | DB tayyor: data/bot.db | Jami users: 85 ta
+2026-03-29 14:28:22,872 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:28:22,969 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:28:23,595 | INFO | AIQuizBot | Sessiya DB ga saqlandi: +923557517418
+2026-03-29 14:28:23,596 | INFO | AIQuizBot | Quiz akkaunt ulandi: +923557517418
+2026-03-29 14:28:23,597 | WARNING | AIQuizBot | ⚠️ Notify akkaunt topilmadi: +998934897111 — /notify_ulash buyrug'ini ishlating
+2026-03-29 14:28:23,599 | INFO | AIQuizBot | ✅ AI Quiz Bot tayyor! 1 ta akkaunt.
+2026-03-29 14:28:23,600 | INFO | AIQuizBot | Navbat ishlovchisi ishga tushdi
+2026-03-29 14:28:58,084 | ERROR | AIQuizBot | Log yuborishda xato: Could not find the input entity for PeerChannel(channel_id=3797378600) (PeerChannel). Please read https://docs.telethon.dev/en/stable/concepts/entities.html to find out more details.
+2026-03-29 14:29:58,672 | INFO | AIQuizBot | Sessiya DB dan tiklandi: +998934897111
+2026-03-29 14:29:58,680 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:29:58,785 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:29:59,245 | INFO | AIQuizBot | ✅ @humocardbot tinglash aktiv: <telethon.client.telegramclient.TelegramClient object at 0x00000119A66BBCB0>
+2026-03-29 14:30:26,880 | INFO | AIQuizBot | Fayl keldi: user=6904259496
+2026-03-29 14:30:27,234 | INFO | AIQuizBot | Fayl yuklanmoqda: user=6904259496
+2026-03-29 14:30:27,234 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:30:27,380 | INFO | telethon.client.downloads | File lives in another DC
+2026-03-29 14:30:27,529 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:30:29,102 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:30:29,103 | INFO | telethon.client.telegrambaseclient | Exporting auth for new borrowed sender in DcOption(id=4, ip_address='149.154.167.92', port=443, ipv6=False, media_only=False, tcpo_only=False, cdn=False, static=False, this_port_only=False, secret=None)
+2026-03-29 14:30:30,424 | INFO | AIQuizBot | Fayl yuklandi: 88598 bayt, user=6904259496
+2026-03-29 14:30:30,424 | INFO | AIQuizBot | Fayl: name=1111111.docx, mime=application/vnd.openxmlformats-officedocument.wordprocessingml.document, user=6904259496
+2026-03-29 14:30:30,943 | INFO | AIQuizBot | DOCX o'qildi: 43472 belgi
+2026-03-29 14:30:30,948 | INFO | AIQuizBot | Parse natija: 195 savol, user=6904259496
+2026-03-29 14:30:30,949 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 195 savol, user=6904259496
+2026-03-29 14:30:33,048 | INFO | AIQuizBot | To'lov yaratildi: user=6904259496, karta=9860 3501 4339 8906, summa=11500, id=39
+2026-03-29 14:30:59,317 | INFO | AIQuizBot | humocardbot xabari: 🎉 **To'ldirish**
+➕ **11.500,00 UZS**
+📍 __UZUM BANK Visa to Hu__
+💳 HUMOCARD *8906
+🕓 14:30 29.03.2026
+💰 **186.000,00 UZS**
+2026-03-29 14:30:59,318 | INFO | AIQuizBot | Parse natijasi: summa=11500, karta=9860 3501 4339 8906
+2026-03-29 14:30:59,318 | INFO | AIQuizBot | To'lov aniqlandi: karta=9860 3501 4339 8906, summa=11500
+2026-03-29 14:30:59,485 | INFO | AIQuizBot | ✅ To'lov tasdiqlandi: user=6904259496, +11500 so'm
+2026-03-29 14:32:22,833 | INFO | telethon.client.telegrambaseclient | Disconnecting borrowed sender for DC 4
+2026-03-29 14:32:22,835 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.92:443/TcpFull...
+2026-03-29 14:32:22,836 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:33:46,142 | INFO | AIQuizBot | Start msg ID: 4831
+2026-03-29 14:33:56,773 | INFO | AIQuizBot |   [1/25] OK
+2026-03-29 14:34:01,109 | INFO | AIQuizBot |   [2/25] OK
+2026-03-29 14:34:05,465 | INFO | AIQuizBot |   [3/25] OK
+2026-03-29 14:34:09,753 | INFO | AIQuizBot |   [4/25] OK
+2026-03-29 14:34:14,088 | INFO | AIQuizBot |   [5/25] OK
+2026-03-29 14:34:18,373 | INFO | AIQuizBot |   [6/25] OK
+2026-03-29 14:34:22,675 | INFO | AIQuizBot |   [7/25] OK
+2026-03-29 14:34:27,057 | INFO | AIQuizBot |   [8/25] OK
+2026-03-29 14:34:31,367 | INFO | AIQuizBot |   [9/25] OK
+2026-03-29 14:34:35,686 | INFO | AIQuizBot |   [10/25] OK
+2026-03-29 14:34:40,005 | INFO | AIQuizBot |   [11/25] OK
+2026-03-29 14:34:44,326 | INFO | AIQuizBot |   [12/25] OK
+2026-03-29 14:34:48,583 | INFO | AIQuizBot |   [13/25] OK
+2026-03-29 14:34:52,863 | INFO | AIQuizBot |   [14/25] OK
+2026-03-29 14:34:57,160 | INFO | AIQuizBot |   [15/25] OK
+2026-03-29 14:35:01,494 | INFO | AIQuizBot |   [16/25] OK
+2026-03-29 14:35:05,819 | INFO | AIQuizBot |   [17/25] OK
+2026-03-29 14:35:10,176 | INFO | AIQuizBot |   [18/25] OK
+2026-03-29 14:35:14,562 | INFO | AIQuizBot |   [19/25] OK
+2026-03-29 14:35:19,021 | INFO | AIQuizBot |   [20/25] OK
+2026-03-29 14:35:23,316 | INFO | AIQuizBot |   [21/25] OK
+2026-03-29 14:35:27,617 | INFO | AIQuizBot |   [22/25] OK
+2026-03-29 14:35:31,990 | INFO | AIQuizBot |   [23/25] OK
+2026-03-29 14:35:36,313 | INFO | AIQuizBot |   [24/25] OK
+2026-03-29 14:35:40,602 | INFO | AIQuizBot |   [25/25] OK
+2026-03-29 14:36:03,457 | INFO | AIQuizBot | Havola qidirilmoqda (urinish 1), 10 ta yangi xabar
+2026-03-29 14:36:03,458 | INFO | AIQuizBot | Havola topildi: https://t.me/QuizBot?startgroup=eEdPzqTv
+2026-03-29 14:36:08,475 | INFO | AIQuizBot | Start msg ID: 4946
+2026-03-29 14:36:19,117 | INFO | AIQuizBot |   [1/25] OK
+2026-03-29 14:36:23,416 | INFO | AIQuizBot |   [2/25] OK
+2026-03-29 14:36:27,738 | INFO | AIQuizBot |   [3/25] OK
+2026-03-29 14:36:32,067 | INFO | AIQuizBot |   [4/25] OK
+2026-03-29 14:36:36,403 | INFO | AIQuizBot |   [5/25] OK
+2026-03-29 14:36:40,712 | INFO | AIQuizBot |   [6/25] OK
+2026-03-29 14:36:45,067 | INFO | AIQuizBot |   [7/25] OK
+2026-03-29 14:36:49,380 | INFO | AIQuizBot |   [8/25] OK
+2026-03-29 14:36:53,693 | INFO | AIQuizBot |   [9/25] OK
+2026-03-29 14:36:58,007 | INFO | AIQuizBot |   [10/25] OK
+2026-03-29 14:37:02,322 | INFO | AIQuizBot |   [11/25] OK
+2026-03-29 14:37:06,881 | INFO | AIQuizBot |   [12/25] OK
+2026-03-29 14:37:11,183 | INFO | AIQuizBot |   [13/25] OK
+2026-03-29 14:37:15,511 | INFO | AIQuizBot |   [14/25] OK
+2026-03-29 14:37:19,830 | INFO | AIQuizBot |   [15/25] OK
+2026-03-29 14:37:24,143 | INFO | AIQuizBot |   [16/25] OK
+2026-03-29 14:37:28,432 | INFO | AIQuizBot |   [17/25] OK
+2026-03-29 14:37:30,337 | INFO | telethon.network.mtprotosender | Disconnecting from 149.154.167.51:443/TcpFull...
+2026-03-29 14:37:30,339 | INFO | telethon.network.mtprotosender | Disconnection from 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:37:30,340 | INFO | telethon.network.mtprotosender | Not disconnecting (already have no connection)
+2026-03-29 14:42:36,492 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:42:36,605 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:42:37,233 | INFO | AIQuizBot | Bot ulandi!
+2026-03-29 14:42:37,237 | INFO | AIQuizBot | DB tayyor: data/bot.db | Jami users: 85 ta
+2026-03-29 14:42:37,245 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.92:443/TcpFull...
+2026-03-29 14:42:37,351 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.92:443/TcpFull complete!
+2026-03-29 14:42:37,932 | INFO | AIQuizBot | Sessiya DB ga saqlandi: +923557517418
+2026-03-29 14:42:37,932 | INFO | AIQuizBot | Quiz akkaunt ulandi: +923557517418
+2026-03-29 14:42:37,933 | WARNING | AIQuizBot | ⚠️ Notify akkaunt topilmadi: +998934897111 — /notify_ulash buyrug'ini ishlating
+2026-03-29 14:42:37,934 | INFO | AIQuizBot | ✅ AI Quiz Bot tayyor! 1 ta akkaunt.
+2026-03-29 14:42:37,934 | INFO | AIQuizBot | Navbat ishlovchisi ishga tushdi
+2026-03-29 14:43:00,821 | INFO | AIQuizBot | Sessiya DB dan tiklandi: +998934897111
+2026-03-29 14:43:00,828 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:43:00,932 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:43:24,289 | INFO | AIQuizBot | Fayl keldi: user=7878916781
+2026-03-29 14:43:24,596 | INFO | AIQuizBot | Fayl yuklanmoqda: user=7878916781
+2026-03-29 14:43:24,596 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:43:24,926 | INFO | AIQuizBot | Fayl yuklandi: 28672 bayt, user=7878916781
+2026-03-29 14:43:24,926 | INFO | AIQuizBot | Fayl: name=userbot_998934897111.session, mime=application/x-sqlite3, user=7878916781
+2026-03-29 14:43:24,927 | INFO | AIQuizBot | TXT o'qildi: 28500 belgi
+2026-03-29 14:43:24,927 | INFO | AIQuizBot | Parse natija: 1 savol, user=7878916781
+2026-03-29 14:43:24,930 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 1 savol, user=7878916781
+2026-03-29 14:43:25,263 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:43:25,540 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-18' coro=<Connection._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:310> wait_for=<Future cancelled>>
+2026-03-29 14:43:25,601 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-19' coro=<Connection._recv_loop() running at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:355> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:43:25,602 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-20' coro=<MTProtoSender._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:43:25,603 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-21' coro=<MTProtoSender._recv_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:497> wait_for=<Future cancelled>>
+2026-03-29 14:43:25,604 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:43:25,712 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:43:26,081 | ERROR | AIQuizBot | Sessiya ulanish xato: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by InvokeWithLayerRequest(InitConnectionRequest(GetConfigRequest)))
+2026-03-29 14:43:26,214 | INFO | AIQuizBot | Sessiya yuklandi: +998934897111, 28672 bayt
+2026-03-29 14:43:32,668 | INFO | AIQuizBot | Sessiya DB dan tiklandi: +998934897111
+2026-03-29 14:43:32,674 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:43:32,775 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:44:11,326 | INFO | AIQuizBot | Fayl keldi: user=7878916781
+2026-03-29 14:44:11,639 | INFO | AIQuizBot | Fayl yuklanmoqda: user=7878916781
+2026-03-29 14:44:11,640 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:44:11,893 | INFO | AIQuizBot | Fayl yuklandi: 28672 bayt, user=7878916781
+2026-03-29 14:44:11,893 | INFO | AIQuizBot | Fayl: name=userbot_998934897111.session, mime=application/x-sqlite3, user=7878916781
+2026-03-29 14:44:11,895 | INFO | AIQuizBot | TXT o'qildi: 28500 belgi
+2026-03-29 14:44:11,895 | INFO | AIQuizBot | Parse natija: 1 savol, user=7878916781
+2026-03-29 14:44:11,899 | INFO | AIQuizBot | State saqlandi: step=wait_payment_file, 1 savol, user=7878916781
+2026-03-29 14:44:12,156 | INFO | telethon.client.downloads | Starting direct file download in chunks of 131072 at 0, stride 131072
+2026-03-29 14:44:12,418 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:44:12,564 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:44:12,827 | ERROR | AIQuizBot | Sessiya ulanish xato: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by InvokeWithLayerRequest(InitConnectionRequest(GetConfigRequest)))
+2026-03-29 14:44:13,006 | INFO | AIQuizBot | Sessiya yuklandi: +998934897111, 28672 bayt
+2026-03-29 14:44:58,018 | WARNING | telethon.network.connection.connection | Server closed the connection: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:44:58,019 | INFO | telethon.network.mtprotosender | Connection closed while receiving data: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:44:58,020 | INFO | telethon.network.mtprotosender | Closing current connection to begin reconnect...
+2026-03-29 14:44:58,022 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:44:58,125 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:44:58,332 | WARNING | telethon.client.updates | Error executing high-level request after reconnect: <class 'telethon.errors.rpcerrorlist.AuthKeyDuplicatedError'>: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by GetUsersRequest)
+2026-03-29 14:45:04,985 | WARNING | telethon.network.connection.connection | Server closed the connection: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:45:04,985 | INFO | telethon.network.mtprotosender | Connection closed while receiving data: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:45:04,986 | INFO | telethon.network.mtprotosender | Closing current connection to begin reconnect...
+2026-03-29 14:45:04,987 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:45:05,086 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:45:05,300 | WARNING | telethon.client.updates | Error executing high-level request after reconnect: <class 'telethon.errors.rpcerrorlist.AuthKeyDuplicatedError'>: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by GetUsersRequest)
+2026-03-29 14:45:44,946 | WARNING | telethon.network.connection.connection | Server closed the connection: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:45:44,947 | INFO | telethon.network.mtprotosender | Connection closed while receiving data: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:45:44,947 | INFO | telethon.network.mtprotosender | Closing current connection to begin reconnect...
+2026-03-29 14:45:44,948 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:45:45,046 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:45:45,203 | WARNING | telethon.client.updates | Error executing high-level request after reconnect: <class 'telethon.errors.rpcerrorlist.AuthKeyDuplicatedError'>: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by GetUsersRequest)
+2026-03-29 14:46:29,937 | WARNING | telethon.network.connection.connection | Server closed the connection: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:46:29,938 | INFO | telethon.network.mtprotosender | Connection closed while receiving data: 0 bytes read on a total of 8 expected bytes
+2026-03-29 14:46:29,938 | INFO | telethon.network.mtprotosender | Closing current connection to begin reconnect...
+2026-03-29 14:46:29,940 | INFO | telethon.network.mtprotosender | Connecting to 149.154.167.51:443/TcpFull...
+2026-03-29 14:46:29,941 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-50' coro=<Connection._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:310> wait_for=<Future cancelled>>
+2026-03-29 14:46:30,045 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-51' coro=<Connection._recv_loop() running at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:355> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:46:30,045 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-52' coro=<MTProtoSender._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:46:30,047 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-53' coro=<MTProtoSender._recv_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:497> wait_for=<Future cancelled>>
+2026-03-29 14:46:30,048 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-56' coro=<Connection._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:310> wait_for=<Future cancelled>>
+2026-03-29 14:46:30,050 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-57' coro=<Connection._recv_loop() running at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\connection\connection.py:355> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:46:30,051 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-58' coro=<MTProtoSender._send_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:446> wait_for=<Future pending cb=[Task.task_wakeup()]>>
+2026-03-29 14:46:30,051 | ERROR | asyncio | Task was destroyed but it is pending!
+task: <Task pending name='Task-59' coro=<MTProtoSender._recv_loop() done, defined at C:\Users\Asus\AppData\Local\Programs\Python\Python312\Lib\site-packages\telethon\network\mtprotosender.py:497> wait_for=<Future cancelled>>
+2026-03-29 14:46:30,160 | INFO | telethon.network.mtprotosender | Connection to 149.154.167.51:443/TcpFull complete!
+2026-03-29 14:46:30,412 | WARNING | telethon.client.updates | Error executing high-level request after reconnect: <class 'telethon.errors.rpcerrorlist.AuthKeyDuplicatedError'>: The authorization key (session file) was used under two different IP addresses simultaneously, and can no longer be used. Use the same session exclusively, or use different sessions (caused by GetUsersRequest)
