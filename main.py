@@ -78,7 +78,7 @@ HUMO_CARDS = [
 ]
 AI_PRICE           = 2000    # 1 ta AI test narxi (so'm)
 FILE_PRICE_PER_25  = 1500    # har 25 savol uchun narx (fayl orqali)
-PAYMENT_TIMEOUT    = 180     # sekund (3 daqiqa)
+PAYMENT_TIMEOUT    = 600     # sekund (10 daqiqa)
 HUMOCARD_BOT    = "@humocardbot"
 NOTIFY_PHONE    = "+998934897111"  # @humocardbot xabar keladigan raqam
 
@@ -1303,9 +1303,10 @@ async def main():
             prog = await event.respond(f"📤 Yuborilmoqda... 0/{len(all_users)}")
             for i, (target_id,) in enumerate(all_users):
                 try:
-                    await bot_client.send_message(target_id, event.message)
+                    await bot_client.forward_messages(target_id, event.message)
                     ok += 1
-                except Exception:
+                except Exception as e:
+                    log.warning(f"Broadcast xato user={target_id}: {e}")
                     fail += 1
                 if (i + 1) % 20 == 0:
                     try:
@@ -1436,7 +1437,7 @@ async def main():
                         f"💰 -{price:,} so'm | Qoldi: **{bal_left:,} so'm**"
                     )
                     await event.respond(
-                        "Testga nom bering:(Fan nomini yozing):",
+                        "Fan nomini yozing:",
                         buttons=[[Button.text("🔙 Bosh menyu")]]
                     )
 
@@ -1522,12 +1523,14 @@ async def main():
             all_users = get_db().execute("SELECT user_id FROM users").fetchall()
             get_db().close()
             ok, fail = 0, 0
+            broadcast_text = event.message.text or text
             prog = await event.respond(f"📤 Yuborilmoqda... 0/{len(all_users)}")
             for i, (target_id,) in enumerate(all_users):
                 try:
-                    await bot_client.send_message(target_id, event.message)
+                    await bot_client.send_message(target_id, broadcast_text, parse_mode='md')
                     ok += 1
-                except Exception:
+                except Exception as e:
+                    log.warning(f"Broadcast xato user={target_id}: {e}")
                     fail += 1
                 if (i + 1) % 20 == 0:
                     try:
@@ -1876,7 +1879,7 @@ async def main():
             user_states[uid] = state
             total = state.total_questions
             await event.respond(
-                f"📚 **{text}** | ❓ {total} savol\n\nHar variantda nechtadan savol bo'lsin?",
+                f"📚 **{text}** | ❓ {total} savol\n\nHar variantda necha ta?",
                 buttons=variant_btns(total)); return
 
         # ---- VARIANT SONI ----
@@ -1888,7 +1891,7 @@ async def main():
             state.step = "ask_time"
             user_states[uid] = state
             await event.respond(
-                f"✅ **{nv} ta variant** × {pv} savol\n\n⏱ testdagi savolar vaqti:",
+                f"✅ **{nv} ta variant** × {pv} savol\n\n⏱ Vaqt:",
                 buttons=time_btns()); return
 
         # ---- VAQT ----
@@ -2792,8 +2795,6 @@ async def main():
             f"**avtomatik** tasdiqlanadi!\n\n"
             f"❗ Faqat shu kartaga va aynan\n"
             f"**{pay_amount:,} so'm** o'tkazing!",
-            f"❗ To'lov avtomatik tasdiqlanmasa @ksh247 <- yozing\n\n",
-             f"Botga chek tashlangam, xatolik bo'lishi mumkin\n",
             buttons=[[Button.text("🔙 Bosh menyu")]]
         )
         log.info(f"To'lov yaratildi: user={uid}, karta={card}, summa={pay_amount}, id={pay_id}")
