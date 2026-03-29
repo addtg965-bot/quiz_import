@@ -2211,6 +2211,7 @@ async def main():
     async def admin_btns(event):
         uid = event.sender_id
         text = event.text.strip()
+        adm = is_admin(uid)
 
         if text == "👀 Faol foydalanuvchilar":
             if not active_users:
@@ -3307,6 +3308,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-                     
