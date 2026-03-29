@@ -2212,6 +2212,7 @@ async def main():
         uid = event.sender_id
         text = event.text.strip()
         adm = is_admin(uid)
+        log.info(f"admin_btns: uid={uid}, adm={adm}, text={text[:50]}")
 
         if text == "👀 Faol foydalanuvchilar":
             if not active_users:
