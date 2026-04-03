@@ -1,8 +1,91 @@
 from flask import Flask, request, jsonify
-import json, os
+import json, os, logging
 
 app = Flask(__name__)
-DB_FILE = "data/documents.json"
+DB_FILE      = "data/documents.json"
+
+# ============================================================
+#  CLICK WEBHOOK
+# ============================================================
+import sys, pathlib
+# click_payment.py loyiha ildizida joylashgan
+sys.path.insert(0, str(pathlib.Path(__file__).parent))
+from click_payment import ClickRequest, handle_prepare, handle_complete
+
+log = logging.getLogger(__name__)
+
+# Bot bazasi joylashuvi (main.py dagi DB_FILE bilan bir xil)
+BOT_DB_FILE = os.environ.get("DB_FILE", "/data/bot.db")
+if not os.path.exists("/data"):
+    BOT_DB_FILE = "data/bot.db"
+
+# Bot callback — to'lov tasdiqlanganda bot foydalanuvchiga xabar yuboradi.
+# main.py botni ishga tushirganda shu funksiyani o'rnatadi.
+_on_payment_confirmed = None
+
+def set_payment_callback(fn):
+    """main.py tomonidan chaqiriladi: fn(user_id, amount) -> coroutine"""
+    global _on_payment_confirmed
+    _on_payment_confirmed = fn
+
+
+def _parse_click_form(form) -> ClickRequest:
+    """Flask form/JSON dan ClickRequest yaratadi."""
+    def g(k, default=""):
+        return form.get(k, default)
+    return ClickRequest(
+        click_trans_id      = int(g("click_trans_id",  0)),
+        service_id          = int(g("service_id",       0)),
+        click_paydoc_id     = int(g("click_paydoc_id",  0)),
+        merchant_trans_id   = g("merchant_trans_id",    "0"),
+        amount              = float(g("amount",         0)),
+        action              = int(g("action",           0)),
+        error               = int(g("error",            0)),
+        error_note          = g("error_note",           ""),
+        sign_time           = g("sign_time",            ""),
+        sign_string         = g("sign_string",          ""),
+        merchant_prepare_id = int(g("merchant_prepare_id", 0)) or None,
+    )
+
+
+@app.route("/click/prepare", methods=["POST"])
+def click_prepare():
+    """Click PREPARE so'rovini qabul qiladi (action=0)."""
+    try:
+        req = _parse_click_form(request.form or request.json or {})
+        result = handle_prepare(req, BOT_DB_FILE)
+        return jsonify(result)
+    except Exception as e:
+        log.exception("Click PREPARE xatosi: %s", e)
+        return jsonify({"error": -8, "error_note": "Internal error"}), 500
+
+
+@app.route("/click/complete", methods=["POST"])
+def click_complete():
+    """Click COMPLETE so'rovini qabul qiladi (action=1)."""
+    try:
+        req = _parse_click_form(request.form or request.json or {})
+        result = handle_complete(req, BOT_DB_FILE)
+
+        # To'lov muvaffaqiyatli tasdiqlangan — botga xabar berish
+        if result.get("error") == 0 and "_user_id" in result:
+            user_id = result.pop("_user_id")
+            amount  = result.pop("_amount")
+            if _on_payment_confirmed:
+                import asyncio
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.ensure_future(_on_payment_confirmed(user_id, amount))
+                    else:
+                        loop.run_until_complete(_on_payment_confirmed(user_id, amount))
+                except Exception as cb_err:
+                    log.warning("Payment callback xatosi: %s", cb_err)
+
+        return jsonify(result)
+    except Exception as e:
+        log.exception("Click COMPLETE xatosi: %s", e)
+        return jsonify({"error": -8, "error_note": "Internal error"}), 500
 
 def load_docs():
     if os.path.exists(DB_FILE):
