@@ -483,6 +483,1286 @@ def db_count_user_quizzes(user_id: int) -> int:
 # ============================================================
 #  REFERAL TIZIMI
 # ============================================================
+# ============================================================
+#  HTML SAHIFALAR — statik fayllar o'rniga
+# ============================================================
+PRIVACY_HTML = """
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maxfiylik Siyosati — AI Quiz Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: #1e2330;
+    --accent: #4f7fff;
+    --accent2: #7c5cfc;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --gold: #c9a84c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+  .noise {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+  .glow {
+    position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(79,127,255,0.08) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 780px; margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+  header {
+    text-align: center; margin-bottom: 64px;
+    animation: fadeUp .6s ease both;
+  }
+  .bot-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 12px; color: var(--muted); letter-spacing: .08em;
+    margin-bottom: 24px;
+  }
+  .bot-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 2s infinite; }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 700; line-height: 1.2;
+    background: linear-gradient(135deg, #e8eaf0 30%, #4f7fff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; }
+  .lang-switch {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 48px; animation: fadeUp .6s .1s ease both;
+  }
+  .lang-btn {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+    transition: all .2s;
+  }
+  .lang-btn.active {
+    background: var(--accent); border-color: var(--accent);
+    color: #fff;
+  }
+  .lang-btn:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+  .content { display: none; }
+  .content.active { display: block; animation: fadeUp .4s ease both; }
+
+  .section {
+    margin-bottom: 40px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; color: #fff; flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 17px; font-weight: 700; color: var(--text);
+  }
+  .section-body { padding: 20px 24px; }
+  .section-body p { color: #a8b0c0; font-size: 14px; margin-bottom: 12px; }
+  .section-body p:last-child { margin-bottom: 0; }
+  .list { list-style: none; padding: 0; }
+  .list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    color: #a8b0c0; font-size: 14px; margin-bottom: 10px;
+  }
+  .list li:last-child { margin-bottom: 0; }
+  .list li::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0; margin-top: 8px;
+  }
+  .highlight {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: rgba(79,127,255,0.12); color: var(--accent);
+    font-size: 13px; font-family: monospace;
+  }
+  .table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .table th {
+    text-align: left; padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    color: var(--muted); font-size: 11px; letter-spacing: .06em; font-weight: 500;
+    border-bottom: 1px solid var(--border);
+  }
+  .table td {
+    padding: 10px 12px; font-size: 13px; color: #a8b0c0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .table tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 500;
+  }
+  .tag.yes { background: rgba(74,222,128,0.1); color: #4ade80; }
+  .tag.no  { background: rgba(248,113,113,0.1); color: #f87171; }
+
+  footer {
+    text-align: center; padding-top: 48px;
+    color: var(--muted); font-size: 12px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp .6s .3s ease both;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  .updated {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 100px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); margin-bottom: 16px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .4; }
+  }
+
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 80px; }
+    .section-body { padding: 16px; }
+    .section-header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<div class="glow"></div>
+<div class="container">
+
+  <header>
+    <div class="bot-badge"><span></span> @quiz_import_bot</div>
+    <h1>Maxfiylik Siyosati</h1>
+    <p class="subtitle">Privacy Policy · Политика конфиденциальности</p>
+  </header>
+
+  <div class="lang-switch">
+    <button class="lang-btn active" onclick="setLang('uz')">O'zbek</button>
+    <button class="lang-btn" onclick="setLang('ru')">Русский</button>
+  </div>
+
+  <!-- ===== O'ZBEK ===== -->
+  <div id="uz" class="content active">
+    <div class="updated">Yangilangan: 2025-yil</div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Umumiy ma'lumot</div>
+      </div>
+      <div class="section-body">
+        <p>Ushbu maxfiylik siyosati <span class="highlight">@quiz_import_bot</span> Telegram botidan foydalanganda sizning shaxsiy ma'lumotlaringiz qanday to'planishi, ishlatilishi va saqlanishini tushuntiradi.</p>
+        <p>Botdan foydalanishni boshlaganingizda, siz ushbu siyosat shartlarini qabul qilgan bo'lasiz.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Qanday ma'lumotlar to'planadi</div>
+      </div>
+      <div class="section-body">
+        <table class="table">
+          <tr><th>Ma'lumot turi</th><th>Maqsad</th><th>Saqlanadi</th></tr>
+          <tr><td>Telegram ID, ism</td><td>Akkaunt identifikatsiyasi</td><td><span class="tag yes">Ha</span></td></tr>
+          <tr><td>Username</td><td>Muloqot uchun</td><td><span class="tag yes">Ha</span></td></tr>
+          <tr><td>Yuklangan fayllar</td><td>Quiz yaratish (vaqtinchalik)</td><td><span class="tag no">Yo'q</span></td></tr>
+          <tr><td>To'lov ma'lumotlari</td><td>To'lov tasdiqlash</td><td><span class="tag yes">Ha</span></td></tr>
+          <tr><td>Quiz tarixi</td><td>Sizning quizlaringizni ko'rsatish</td><td><span class="tag yes">Ha</span></td></tr>
+          <tr><td>Balans va tranzaksiyalar</td><td>Moliyaviy hisob</td><td><span class="tag yes">Ha</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Ma'lumotlar uchinchi tomonlarga berilmasmi</div>
+      </div>
+      <div class="section-body">
+        <p>Sizning shaxsiy ma'lumotlaringiz <strong>hech qachon</strong> sotilmaydi yoki reklama maqsadida ishlatilmaydi. Faqat quyidagi holatlarda ma'lumot uzatiladi:</p>
+        <ul class="list">
+          <li>To'lov tizimi (CLICK, Payme) — to'lovni tasdiqlash uchun faqat zarur ma'lumotlar</li>
+          <li>Quiz yaratish — @QuizBot xizmatiga savollar yuboriladi (shaxsiy ma'lumot emas)</li>
+          <li>AI xizmat (Claude API) — faqat siz yozgan savol matni, shaxsiy ma'lumot emas</li>
+          <li>Qonun talabi bo'yicha — sud yoki davlat organlari rasmiy so'rovi bilan</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">To'lov xavfsizligi</div>
+      </div>
+      <div class="section-body">
+        <p>Barcha to'lovlar <strong>CLICK</strong> va <strong>Payme</strong> rasmiy to'lov tizimlari orqali amalga oshiriladi. Karta ma'lumotlaringiz hech qachon botda saqlanmaydi — to'lov tizimlari tomonidan shifrlangan holda qayta ishlanadi.</p>
+        <ul class="list">
+          <li>Karta raqamingiz bizga ko'rinmaydi</li>
+          <li>To'lov summasi o'zgartirib bo'lmaydi — tizim tomonidan qotiriladi</li>
+          <li>Webhook signature tekshiruvi orqali soxta to'lovlardan himoya</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">Ma'lumotlarni saqlash muddati</div>
+      </div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Foydalanuvchi ma'lumotlari — akkaunt faol bo'lgunga qadar</li>
+          <li>Yuklangan fayllar — quiz yaratilgandan keyin darhol o'chiriladi</li>
+          <li>To'lov tarixi — 3 yil (qonun talabi)</li>
+          <li>Quiz tarixi — 1 yil</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <div class="section-title">Sizning huquqlaringiz</div>
+      </div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Ma'lumotlaringizni ko'rish va yuklab olish huquqi</li>
+          <li>Ma'lumotlaringizni o'chirish talabi (bot admini orqali)</li>
+          <li>To'lov tarixiga shikoyat qilish huquqi</li>
+          <li>Maxfiylik siyosatidagi o'zgarishlar haqida xabardor bo'lish</li>
+        </ul>
+        <p style="margin-top:12px">Murojaat uchun: bot ichida <span class="highlight">/support</span> yoki admin bilan bog'laning.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <div class="section-title">Cookie va kuzatuv</div>
+      </div>
+      <div class="section-body">
+        <p>Bot hech qanday cookie yoki tashqi kuzatuv tizimidan foydalanmaydi. Faqat Telegram platformasining o'z analitikasi ishlatilishi mumkin.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== РУССКИЙ ===== -->
+  <div id="ru" class="content">
+    <div class="updated">Обновлено: 2025 год</div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Общая информация</div>
+      </div>
+      <div class="section-body">
+        <p>Настоящая политика конфиденциальности объясняет, как бот <span class="highlight">@quiz_import_bot</span> собирает, использует и хранит ваши персональные данные при использовании сервиса.</p>
+        <p>Начиная использовать бота, вы соглашаетесь с условиями данной политики.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Какие данные собираются</div>
+      </div>
+      <div class="section-body">
+        <table class="table">
+          <tr><th>Тип данных</th><th>Цель</th><th>Хранится</th></tr>
+          <tr><td>Telegram ID, имя</td><td>Идентификация аккаунта</td><td><span class="tag yes">Да</span></td></tr>
+          <tr><td>Username</td><td>Для общения</td><td><span class="tag yes">Да</span></td></tr>
+          <tr><td>Загруженные файлы</td><td>Создание квиза (временно)</td><td><span class="tag no">Нет</span></td></tr>
+          <tr><td>Платёжные данные</td><td>Подтверждение оплаты</td><td><span class="tag yes">Да</span></td></tr>
+          <tr><td>История квизов</td><td>Отображение ваших квизов</td><td><span class="tag yes">Да</span></td></tr>
+          <tr><td>Баланс и транзакции</td><td>Финансовый учёт</td><td><span class="tag yes">Да</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Передача данных третьим лицам</div>
+      </div>
+      <div class="section-body">
+        <p>Ваши персональные данные <strong>никогда</strong> не продаются и не используются в рекламных целях. Передача данных осуществляется только в следующих случаях:</p>
+        <ul class="list">
+          <li>Платёжные системы (CLICK, Payme) — только необходимые данные для подтверждения оплаты</li>
+          <li>Создание квиза — в @QuizBot передаются только вопросы (без персональных данных)</li>
+          <li>AI-сервис (Claude API) — только текст вопроса, без персональных данных</li>
+          <li>По требованию закона — по официальному запросу суда или государственных органов</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">Безопасность платежей</div>
+      </div>
+      <div class="section-body">
+        <p>Все платежи осуществляются через официальные платёжные системы <strong>CLICK</strong> и <strong>Payme</strong>. Данные вашей карты никогда не хранятся в боте — они обрабатываются в зашифрованном виде платёжными системами.</p>
+        <ul class="list">
+          <li>Номер вашей карты нам недоступен</li>
+          <li>Сумма платежа фиксируется системой и не может быть изменена</li>
+          <li>Защита от поддельных платежей через проверку webhook-подписи</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">5</div>
+        <div class="section-title">Срок хранения данных</div>
+      </div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Данные пользователя — до тех пор, пока аккаунт активен</li>
+          <li>Загруженные файлы — удаляются сразу после создания квиза</li>
+          <li>История платежей — 3 года (по требованию закона)</li>
+          <li>История квизов — 1 год</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">6</div>
+        <div class="section-title">Ваши права</div>
+      </div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Право на просмотр и выгрузку своих данных</li>
+          <li>Право на удаление данных (через администратора бота)</li>
+          <li>Право на обжалование платёжных операций</li>
+          <li>Уведомление об изменениях в политике конфиденциальности</li>
+        </ul>
+        <p style="margin-top:12px">Для обращений: команда <span class="highlight">/support</span> внутри бота или свяжитесь с администратором.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">7</div>
+        <div class="section-title">Cookie и отслеживание</div>
+      </div>
+      <div class="section-body">
+        <p>Бот не использует cookie или сторонние системы отслеживания. Может использоваться только встроенная аналитика платформы Telegram.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p style="margin-bottom:16px">
+      <span class="updated">© 2025 AI Quiz Bot</span>
+    </p>
+    <p>Savollar uchun / По вопросам: <a href="https://t.me/quiz_import_bot">@quiz_import_bot</a></p>
+  </footer>
+
+</div>
+<script>
+function setLang(lang) {
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>
+
+"""
+
+TERMS_HTML = """
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foydalanish Shartlari — AI Quiz Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: #1e2330;
+    --accent: #4f7fff;
+    --accent2: #7c5cfc;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+  .glow {
+    position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(124,92,252,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 780px; margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+  header { text-align: center; margin-bottom: 56px; animation: fadeUp .6s ease both; }
+  .bot-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 100px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 12px; color: var(--muted); letter-spacing: .08em; margin-bottom: 24px;
+  }
+  .bot-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; animation: pulse 2s infinite; }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 5vw, 44px); font-weight: 700; line-height: 1.2;
+    background: linear-gradient(135deg, #e8eaf0 30%, #7c5cfc);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; }
+  .lang-switch {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 40px; animation: fadeUp .6s .1s ease both;
+  }
+  .lang-btn {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .2s;
+  }
+  .lang-btn.active { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+  .lang-btn:hover:not(.active) { border-color: var(--accent2); color: var(--text); }
+  .content { display: none; }
+  .content.active { display: block; animation: fadeUp .4s ease both; }
+  .updated {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 100px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); margin-bottom: 24px;
+  }
+  .section {
+    margin-bottom: 32px; border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; background: var(--surface);
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; color: #fff; flex-shrink: 0;
+  }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; }
+  .section-body { padding: 20px 24px; }
+  .section-body p { color: #a8b0c0; font-size: 14px; margin-bottom: 12px; }
+  .section-body p:last-child { margin-bottom: 0; }
+  .list { list-style: none; padding: 0; }
+  .list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    color: #a8b0c0; font-size: 14px; margin-bottom: 10px;
+  }
+  .list li:last-child { margin-bottom: 0; }
+  .list li::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent2); flex-shrink: 0; margin-top: 8px;
+  }
+  .highlight {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: rgba(124,92,252,0.12); color: var(--accent2);
+    font-size: 13px; font-family: monospace;
+  }
+  .warning-box {
+    padding: 14px 16px; border-radius: 10px;
+    background: rgba(248,113,113,0.06);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: #f87171; font-size: 13px; margin-top: 12px; line-height: 1.6;
+  }
+  .price-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  .price-table th {
+    text-align: left; padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    color: var(--muted); font-size: 11px; letter-spacing: .06em;
+    border-bottom: 1px solid var(--border);
+  }
+  .price-table td {
+    padding: 10px 12px; font-size: 13px; color: #a8b0c0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .price-table tr:last-child td { border-bottom: none; }
+  .price { color: var(--accent2); font-weight: 500; }
+  footer {
+    text-align: center; padding-top: 48px;
+    color: var(--muted); font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--accent2); text-decoration: none; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 80px; }
+    .section-body, .section-header { padding: 14px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="container">
+
+  <header>
+    <div class="bot-badge"><span></span> @quiz_import_bot</div>
+    <h1>Foydalanish Shartlari</h1>
+    <p class="subtitle">Terms of Service · Условия использования</p>
+  </header>
+
+  <div class="lang-switch">
+    <button class="lang-btn active" onclick="setLang('uz', this)">O'zbek</button>
+    <button class="lang-btn" onclick="setLang('ru', this)">Русский</button>
+  </div>
+
+  <!-- ===== O'ZBEK ===== -->
+  <div id="uz" class="content active">
+    <div class="updated">Yangilangan: 2025-yil</div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">1</div><div class="section-title">Umumiy qoidalar</div></div>
+      <div class="section-body">
+        <p>Ushbu foydalanish shartlari <span class="highlight">@quiz_import_bot</span> Telegram botidan foydalanish qoidalarini belgilaydi. Botdan foydalanishni boshlaganingizda va shartlarni qabul qilganingizda, siz ushbu qoidalarga rioya qilishga rozilik bildirasiz.</p>
+        <p>Bot O'zbekiston Respublikasi qonunchiligi asosida faoliyat yuritadi.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">2</div><div class="section-title">Xizmatlar va narxlar</div></div>
+      <div class="section-body">
+        <table class="price-table">
+          <tr><th>Xizmat</th><th>Narx</th></tr>
+          <tr><td>AI test tuzish</td><td class="price">2 000 so'm</td></tr>
+          <tr><td>Fayldan quiz yaratish (har 25 savol)</td><td class="price">1 500 so'm</td></tr>
+          <tr><td>AI taqdimot (15 slayd)</td><td class="price">5 000 so'm</td></tr>
+        </table>
+        <p style="margin-top:12px">Narxlar oldindan e'lon qilinmасдан o'zgarishi mumkin. O'zgarishlar bot ichida e'lon qilinadi.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">3</div><div class="section-title">To'lov va qaytarish siyosati</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>To'lovlar CLICK va Payme rasmiy to'lov tizimlari orqali amalga oshiriladi</li>
+          <li>Balansga qo'shilgan mablag' qaytarilmaydi, faqat xizmat uchun ishlatiladi</li>
+          <li>Texnik xato sababli quiz yaratilmasa — pul avtomatik qaytariladi</li>
+          <li>Noto'g'ri to'lov yoki takroriy to'lov bo'lsa — admin orqali murojaat qiling</li>
+        </ul>
+        <div class="warning-box">⚠️ To'lov qilingan, lekin xizmat ko'rsatilmagan hollarda 24 soat ichida murojaat qilish shart. Muddati o'tgan da'volar ko'rib chiqilmaydi.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">4</div><div class="section-title">Taqiqlangan harakatlar</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Botni avtomatlashtirilgan usulda (spam) ishlatish</li>
+          <li>To'lov tizimini aldash yoki chetlab o'tishga urinish</li>
+          <li>Boshqa foydalanuvchilar ma'lumotlariga ruxsatsiz kirish</li>
+          <li>Botdan tijorat maqsadida qayta sotish uchun foydalanish</li>
+          <li>Mualliflik huquqini buzuvchi materiallar yuklash</li>
+          <li>Botni buzish yoki xizmatga zarar yetkazishga urinish</li>
+        </ul>
+        <div class="warning-box">⚠️ Qoidabuzarlik aniqlanganda akkaunt ogohlantirmasiz bloklash huquqi saqlanadi.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">5</div><div class="section-title">Hamkorlik dasturi shartlari</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Hamkor bo'lish uchun ariza qoldirib, admin tasdig'ini olish shart</li>
+          <li>Har jalb qilingan foydalanuvchi uchun: <span class="highlight">+50 so'm</span></li>
+          <li>Jalb qilingan foydalanuvchining har to'lovidan: <span class="highlight">20%</span> komissiya</li>
+          <li>Minimal chiqarish summasi: <span class="highlight">15 000 so'm</span></li>
+          <li>Soxta akkauntlar orqali daromad olishga urinish — akkaunt bloklanadi</li>
+          <li>Hamkor balansi naqd pulga o'zgartiriladi, boshqa maqsadda ishlatilmaydi</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">6</div><div class="section-title">Kontent va mualliflik huquqi</div></div>
+      <div class="section-body">
+        <p>Foydalanuvchi yuklagan fayllar va matnlar uning o'z mas'uliyatida. Bot mualliflik huquqini buzuvchi materiallar uchun javobgar emas.</p>
+        <p>AI tomonidan yaratilgan testlar va taqdimotlar foydalanuvchiga tegishli bo'lib, tijorat maqsadida ishlatish mumkin.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">7</div><div class="section-title">Mas'uliyat chegaralari</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Bot xizmatining uzilishi yoki texnik nosozlik uchun bot to'liq mas'ul emas</li>
+          <li>Telegram platformasining o'zi sabab bo'lgan muammolar uchun mas'uliyat yo'q</li>
+          <li>AI tomonidan yaratilgan kontentning aniqligi kafolatlanmaydi — foydalanuvchi tekshirishi tavsiya etiladi</li>
+          <li>Force majeure holatlarida majburiyatlar bajarilmasligi mumkin</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">8</div><div class="section-title">Shartlarning o'zgarishi</div></div>
+      <div class="section-body">
+        <p>Foydalanish shartlari oldindan xabardor qilinib o'zgartirilishi mumkin. O'zgarishlar bot ichida e'lon qilinadi. Botdan foydalanishni davom ettirish yangi shartlarni qabul qilish hisoblanadi.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== РУССКИЙ ===== -->
+  <div id="ru" class="content">
+    <div class="updated">Обновлено: 2025 год</div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">1</div><div class="section-title">Общие положения</div></div>
+      <div class="section-body">
+        <p>Настоящие условия использования регулируют правила работы с Telegram-ботом <span class="highlight">@quiz_import_bot</span>. Начиная пользоваться ботом и принимая условия, вы соглашаетесь соблюдать данные правила.</p>
+        <p>Бот работает в соответствии с законодательством Республики Узбекистан.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">2</div><div class="section-title">Услуги и цены</div></div>
+      <div class="section-body">
+        <table class="price-table">
+          <tr><th>Услуга</th><th>Цена</th></tr>
+          <tr><td>Создание AI-теста</td><td class="price">2 000 сум</td></tr>
+          <tr><td>Квиз из файла (каждые 25 вопросов)</td><td class="price">1 500 сум</td></tr>
+          <tr><td>AI-презентация (15 слайдов)</td><td class="price">5 000 сум</td></tr>
+        </table>
+        <p style="margin-top:12px">Цены могут изменяться без предварительного уведомления. Изменения объявляются внутри бота.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">3</div><div class="section-title">Оплата и возврат средств</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Оплата производится через официальные платёжные системы CLICK и Payme</li>
+          <li>Средства, добавленные на баланс, не возвращаются — используются только для услуг</li>
+          <li>Если квиз не создан по технической ошибке — деньги возвращаются автоматически</li>
+          <li>При ошибочной или двойной оплате — обратитесь к администратору</li>
+        </ul>
+        <div class="warning-box">⚠️ При оплате без получения услуги необходимо обратиться в течение 24 часов. Заявки с истёкшим сроком не рассматриваются.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">4</div><div class="section-title">Запрещённые действия</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Использование бота в автоматизированном режиме (спам)</li>
+          <li>Попытки обмануть или обойти платёжную систему</li>
+          <li>Несанкционированный доступ к данным других пользователей</li>
+          <li>Использование бота для перепродажи в коммерческих целях</li>
+          <li>Загрузка материалов, нарушающих авторские права</li>
+          <li>Попытки взлома или нанесения вреда сервису</li>
+        </ul>
+        <div class="warning-box">⚠️ При обнаружении нарушений аккаунт может быть заблокирован без предупреждения.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">5</div><div class="section-title">Условия партнёрской программы</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Для участия необходимо подать заявку и получить подтверждение администратора</li>
+          <li>За каждого привлечённого пользователя: <span class="highlight">+50 сум</span></li>
+          <li>С каждого платежа привлечённого пользователя: <span class="highlight">20%</span> комиссии</li>
+          <li>Минимальная сумма вывода: <span class="highlight">15 000 сум</span></li>
+          <li>Попытки заработка через фиктивные аккаунты — блокировка</li>
+          <li>Партнёрский баланс конвертируется только в наличные, иное использование недопустимо</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">6</div><div class="section-title">Контент и авторские права</div></div>
+      <div class="section-body">
+        <p>Файлы и тексты, загружаемые пользователем, являются его ответственностью. Бот не несёт ответственности за материалы, нарушающие авторские права.</p>
+        <p>Тесты и презентации, созданные AI, принадлежат пользователю и могут использоваться в коммерческих целях.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">7</div><div class="section-title">Ограничение ответственности</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Бот не несёт полной ответственности за перебои в работе или технические сбои</li>
+          <li>Проблемы, вызванные платформой Telegram, не входят в зону ответственности</li>
+          <li>Точность контента, созданного AI, не гарантируется — рекомендуется проверка пользователем</li>
+          <li>В форс-мажорных обстоятельствах обязательства могут не исполняться</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">8</div><div class="section-title">Изменение условий</div></div>
+      <div class="section-body">
+        <p>Условия использования могут быть изменены с предварительным уведомлением. Изменения объявляются внутри бота. Продолжение использования бота означает принятие новых условий.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer style="margin-top:48px">
+    <p style="margin-bottom:12px">© 2025 AI Quiz Bot</p>
+    <p>Savollar / Вопросы: <a href="https://t.me/quiz_import_bot">@quiz_import_bot</a></p>
+  </footer>
+
+</div>
+<script>
+function setLang(lang, btn) {
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
+
+"""
+
+OFERTA_HTML = """
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oferta Shartnomasi — AI Quiz Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: #1e2330;
+    --accent: #4f7fff;
+    --accent2: #7c5cfc;
+    --green: #1D9E75;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.8;
+    min-height: 100vh;
+  }
+  .glow {
+    position: fixed; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(29,158,117,0.07) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  .container {
+    position: relative; z-index: 1;
+    max-width: 780px; margin: 0 auto;
+    padding: 60px 24px 100px;
+  }
+  header { text-align: center; margin-bottom: 56px; animation: fadeUp .6s ease both; }
+  .bot-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 100px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 12px; color: var(--muted); letter-spacing: .08em; margin-bottom: 24px;
+  }
+  .bot-badge span { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 5vw, 42px); font-weight: 700; line-height: 1.2;
+    background: linear-gradient(135deg, #e8eaf0 30%, #1D9E75);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+  }
+  .subtitle { color: var(--muted); font-size: 14px; }
+  .lang-switch {
+    display: flex; justify-content: center; gap: 8px;
+    margin-bottom: 40px; animation: fadeUp .6s .1s ease both;
+  }
+  .lang-btn {
+    padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all .2s;
+  }
+  .lang-btn.active { background: var(--green); border-color: var(--green); color: #fff; }
+  .lang-btn:hover:not(.active) { border-color: var(--green); color: var(--text); }
+  .content { display: none; }
+  .content.active { display: block; animation: fadeUp .4s ease both; }
+  .updated {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 100px;
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); margin-bottom: 24px;
+  }
+  .section {
+    margin-bottom: 28px; border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; background: var(--surface);
+  }
+  .section.yatt {
+    border-color: rgba(29,158,117,0.3);
+    background: rgba(29,158,117,0.04);
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+  }
+  .section.yatt .section-header { border-bottom-color: rgba(29,158,117,0.2); }
+  .section-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--green), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; color: #fff; flex-shrink: 0;
+  }
+  .section-num.gold {
+    background: linear-gradient(135deg, #c9a84c, #e8c870);
+  }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 700; }
+  .section-body { padding: 20px 24px; }
+  .section-body p { color: #a8b0c0; font-size: 14px; margin-bottom: 12px; line-height: 1.7; }
+  .section-body p:last-child { margin-bottom: 0; }
+  .list { list-style: none; padding: 0; }
+  .list li {
+    display: flex; gap: 10px; align-items: flex-start;
+    color: #a8b0c0; font-size: 14px; margin-bottom: 10px;
+  }
+  .list li:last-child { margin-bottom: 0; }
+  .list li::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--green); flex-shrink: 0; margin-top: 8px;
+  }
+  .highlight {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: rgba(29,158,117,0.12); color: var(--green);
+    font-size: 13px; font-family: monospace;
+  }
+  .price-table { width: 100%; border-collapse: collapse; }
+  .price-table th {
+    text-align: left; padding: 10px 12px;
+    background: rgba(255,255,255,0.03);
+    color: var(--muted); font-size: 11px; letter-spacing: .06em;
+    border-bottom: 1px solid var(--border);
+  }
+  .price-table td {
+    padding: 10px 12px; font-size: 13px; color: #a8b0c0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .price-table tr:last-child td { border-bottom: none; }
+  .price { color: var(--green); font-weight: 500; }
+  .yatt-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .yatt-item {
+    padding: 12px 14px; border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(29,158,117,0.15);
+  }
+  .yatt-label { font-size: 11px; color: var(--muted); letter-spacing: .06em; margin-bottom: 4px; }
+  .yatt-value { font-size: 14px; color: var(--text); font-weight: 500; }
+  .yatt-stir {
+    font-family: monospace; font-size: 16px;
+    color: var(--green); letter-spacing: .1em;
+  }
+  .warning-box {
+    padding: 14px 16px; border-radius: 10px;
+    background: rgba(248,113,113,0.06);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: #f87171; font-size: 13px; margin-top: 12px; line-height: 1.6;
+  }
+  .info-box {
+    padding: 14px 16px; border-radius: 10px;
+    background: rgba(29,158,117,0.06);
+    border: 1px solid rgba(29,158,117,0.2);
+    color: #4ade80; font-size: 13px; margin-top: 12px; line-height: 1.6;
+  }
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 32px 0; opacity: 0.5;
+  }
+  footer {
+    text-align: center; padding-top: 48px;
+    color: var(--muted); font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--green); text-decoration: none; }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @media (max-width: 600px) {
+    .container { padding: 40px 16px 80px; }
+    .section-body, .section-header { padding: 14px 16px; }
+    .yatt-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="container">
+
+  <header>
+    <div class="bot-badge"><span></span> @quiz_import_bot</div>
+    <h1>Ommaviy Oferta Shartnomasi</h1>
+    <p class="subtitle">Public Offer Agreement · Публичная оферта</p>
+  </header>
+
+  <div class="lang-switch">
+    <button class="lang-btn active" onclick="setLang('uz', this)">O'zbek</button>
+    <button class="lang-btn" onclick="setLang('ru', this)">Русский</button>
+  </div>
+
+  <!-- ===== O'ZBEK ===== -->
+  <div id="uz" class="content active">
+    <div class="updated">Kuchga kirgan sana: 2025-yil 1-yanvar</div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">1</div><div class="section-title">Oferta predmeti</div></div>
+      <div class="section-body">
+        <p>Ushbu ommaviy oferta shartnomasi (keyingi o'rinlarda "Shartnoma") <span class="highlight">@quiz_import_bot</span> Telegram boti orqali raqamli xizmatlar ko'rsatish shartlarini belgilaydi.</p>
+        <p>Botdan foydalanish va foydalanish shartlarini qabul qilish ushbu ofertaga rozilik bildirilgan deb hisoblanadi. Shartnoma aktsept (qabul qilish) lahzasidan boshlab kuchga kiradi.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">2</div><div class="section-title">Xizmatlar ro'yxati va narxlar</div></div>
+      <div class="section-body">
+        <table class="price-table">
+          <tr><th>Xizmat nomi</th><th>Tavsif</th><th>Narx</th></tr>
+          <tr><td>AI test tuzish</td><td>Claude AI orqali istalgan fandan test</td><td class="price">2 000 so'm</td></tr>
+          <tr><td>Fayldan quiz</td><td>Har 25 savolga (DOCX/PDF/TXT)</td><td class="price">1 500 so'm</td></tr>
+          <tr><td>AI taqdimot</td><td>15 slaydlik PPTX, rasmlar bilan</td><td class="price">5 000 so'm</td></tr>
+        </table>
+        <p style="margin-top:12px">Narxlar O'zbekiston so'mida ko'rsatilgan. Xizmat ko'rsatuvchi narxlarni 3 kun oldin e'lon qilgan holda o'zgartirish huquqini saqlab qoladi.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">3</div><div class="section-title">Tomonlarning huquq va majburiyatlari</div></div>
+      <div class="section-body">
+        <p><strong style="color:var(--text)">Xizmat ko'rsatuvchi majburiyatlari:</strong></p>
+        <ul class="list">
+          <li>Buyurtma qabul qilinganidan so'ng xizmatni belgilangan muddatda ko'rsatish</li>
+          <li>Texnik xato sababli xizmat ko'rsatilmagan taqdirda to'lovni avtomatik qaytarish</li>
+          <li>Foydalanuvchi ma'lumotlarini maxfiy saqlash</li>
+          <li>Xizmat buzilishi haqida foydalanuvchini xabardor qilish</li>
+        </ul>
+        <p style="margin-top:14px"><strong style="color:var(--text)">Foydalanuvchi majburiyatlari:</strong></p>
+        <ul class="list">
+          <li>To'lovni belgilangan miqdorda amalga oshirish</li>
+          <li>Mualliflik huquqini hurmat qilgan holda materiallar yuklash</li>
+          <li>Botdan faqat qonuniy maqsadlarda foydalanish</li>
+          <li>Foydalanish shartlari va ushbu oferta qoidalariga rioya qilish</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">4</div><div class="section-title">To'lov tartibi</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>To'lovlar CLICK va Payme rasmiy to'lov tizimlari orqali amalga oshiriladi</li>
+          <li>To'lov muvaffaqiyatli o'tkazilgandan so'ng balans darhol yangilanadi</li>
+          <li>To'lov summasi tizim tomonidan aniq belgilanadi — o'zgartirib bo'lmaydi</li>
+          <li>Har bir to'lov uchun fiskal chek avtomatik shakllantiriladi</li>
+        </ul>
+        <div class="info-box">✅ Barcha to'lovlar O'zbekiston Respublikasi soliq qonunchiligi talablariga muvofiq rasmiylashtiriladi.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">5</div><div class="section-title">Qaytarish siyosati</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Balansga qo'shilgan mablag' naqd pulga qaytarilmaydi</li>
+          <li>Texnik xato sababli quiz yaratilmasa — mablag' balansga avtomatik qaytariladi</li>
+          <li>Noto'g'ri to'lov yoki takroriy to'lov — 3 ish kuni ichida ko'rib chiqiladi</li>
+          <li>Shikoyat muddati: xizmat ko'rsatilgan kundan boshlab 24 soat</li>
+        </ul>
+        <div class="warning-box">⚠️ Muddati o'tgan shikoyatlar va asossiz qaytarish talablari ko'rib chiqilmaydi.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">6</div><div class="section-title">Mas'uliyat chegaralari</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Xizmat ko'rsatuvchi Telegram platformasi ishlashidan kelib chiqadigan muammolar uchun mas'ul emas</li>
+          <li>AI tomonidan yaratilgan kontent aniqligi kafolatlanmaydi — foydalanuvchi o'zi tekshirishi lozim</li>
+          <li>Foydalanuvchi yuklagan materiallar uchun barcha mas'uliyat foydalanuvchida</li>
+          <li>Force majeure (tabiiy ofat, urush, epidemiya) holatlarida majburiyatlar to'xtatiladi</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">7</div><div class="section-title">Nizolarni hal qilish</div></div>
+      <div class="section-body">
+        <p>Nizolar avval muzokaralar orqali hal qilinadi. Muzokaralar muvaffaqiyatsiz bo'lsa, nizo O'zbekiston Respublikasi qonunchiligi asosida Qoraqalpog'iston Respublikasi sudlarida ko'rib chiqiladi.</p>
+        <p>Murojaat uchun: bot ichida <span class="highlight">/support</span> komandasi yoki <span class="highlight">+998934897111</span></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">8</div><div class="section-title">Shartnoma muddati</div></div>
+      <div class="section-body">
+        <p>Shartnoma noaniq muddatga tuziladi. Foydalanuvchi botdan foydalanishni to'xtatgan taqdirda shartnoma bekor qilingan hisoblanadi. Xizmat ko'rsatuvchi 7 kun oldin ogohlantirish bilan xizmatni to'xtatish huquqiga ega.</p>
+      </div>
+    </div>
+
+    <!-- YATT MA'LUMOTLARI -->
+    <div class="divider"></div>
+
+    <div class="section yatt">
+      <div class="section-header">
+        <div class="section-num gold">★</div>
+        <div class="section-title">Xizmat ko'rsatuvchi ma'lumotlari</div>
+      </div>
+      <div class="section-body">
+        <div class="yatt-grid">
+          <div class="yatt-item" style="grid-column: 1 / -1;">
+            <div class="yatt-label">TO'LIQ NOMI</div>
+            <div class="yatt-value">Karimov Sherali Zokirjon O'g'li</div>
+          </div>
+          <div class="yatt-item" style="grid-column: 1 / -1;">
+            <div class="yatt-label">SOLIQ TO'LOVCHI IDENTIFIKATSIYA RAQAMI (STIR)</div>
+            <div class="yatt-stir">502 030 566 000 29</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">TASHKILOT SHAKLI</div>
+            <div class="yatt-value">Yakka tartibdagi tadbirkor (YATT)</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">FAOLIYAT TURI</div>
+            <div class="yatt-value">Chakana savdo / Raqamli xizmatlar</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">RO'YXATDAN O'TGAN JOY</div>
+            <div class="yatt-value">Qoraqalpog'iston Respublikasi, Amudaryo tumani</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">BOG'LANISH</div>
+            <div class="yatt-value">+998 93 489 71 11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== РУССКИЙ ===== -->
+  <div id="ru" class="content">
+    <div class="updated">Дата вступления в силу: 1 января 2025 года</div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">1</div><div class="section-title">Предмет оферты</div></div>
+      <div class="section-body">
+        <p>Настоящий договор публичной оферты (далее — «Договор») определяет условия оказания цифровых услуг через Telegram-бот <span class="highlight">@quiz_import_bot</span>.</p>
+        <p>Использование бота и принятие условий использования считается акцептом настоящей оферты. Договор вступает в силу с момента акцепта.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">2</div><div class="section-title">Перечень услуг и цены</div></div>
+      <div class="section-body">
+        <table class="price-table">
+          <tr><th>Услуга</th><th>Описание</th><th>Цена</th></tr>
+          <tr><td>Создание AI-теста</td><td>Тест по любому предмету через Claude AI</td><td class="price">2 000 сум</td></tr>
+          <tr><td>Квиз из файла</td><td>Каждые 25 вопросов (DOCX/PDF/TXT)</td><td class="price">1 500 сум</td></tr>
+          <tr><td>AI-презентация</td><td>15 слайдов PPTX с изображениями</td><td class="price">5 000 сум</td></tr>
+        </table>
+        <p style="margin-top:12px">Цены указаны в узбекских сумах. Исполнитель вправе изменять цены с уведомлением за 3 дня.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">3</div><div class="section-title">Права и обязанности сторон</div></div>
+      <div class="section-body">
+        <p><strong style="color:var(--text)">Обязанности исполнителя:</strong></p>
+        <ul class="list">
+          <li>Оказывать услугу в установленные сроки после принятия заказа</li>
+          <li>Автоматически возвращать оплату при технической ошибке</li>
+          <li>Хранить данные пользователя в конфиденциальности</li>
+          <li>Уведомлять пользователя о сбоях в работе сервиса</li>
+        </ul>
+        <p style="margin-top:14px"><strong style="color:var(--text)">Обязанности пользователя:</strong></p>
+        <ul class="list">
+          <li>Производить оплату в установленном размере</li>
+          <li>Загружать материалы с соблюдением авторских прав</li>
+          <li>Использовать бота исключительно в законных целях</li>
+          <li>Соблюдать условия использования и настоящую оферту</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">4</div><div class="section-title">Порядок оплаты</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Оплата производится через платёжные системы CLICK и Payme</li>
+          <li>После успешной оплаты баланс пополняется мгновенно</li>
+          <li>Сумма платежа фиксируется системой и не может быть изменена</li>
+          <li>Фискальный чек формируется автоматически при каждой оплате</li>
+        </ul>
+        <div class="info-box">✅ Все платежи оформляются в соответствии с налоговым законодательством Республики Узбекистан.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">5</div><div class="section-title">Политика возврата</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Средства, добавленные на баланс, наличными не возвращаются</li>
+          <li>При технической ошибке средства автоматически возвращаются на баланс</li>
+          <li>Ошибочные или двойные платежи рассматриваются в течение 3 рабочих дней</li>
+          <li>Срок подачи жалобы: 24 часа с момента оказания услуги</li>
+        </ul>
+        <div class="warning-box">⚠️ Жалобы с истёкшим сроком и необоснованные требования возврата не рассматриваются.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">6</div><div class="section-title">Ограничение ответственности</div></div>
+      <div class="section-body">
+        <ul class="list">
+          <li>Исполнитель не несёт ответственности за сбои платформы Telegram</li>
+          <li>Точность контента, созданного AI, не гарантируется — пользователь обязан проверить</li>
+          <li>Ответственность за загружаемые материалы полностью лежит на пользователе</li>
+          <li>В форс-мажорных обстоятельствах обязательства приостанавливаются</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">7</div><div class="section-title">Разрешение споров</div></div>
+      <div class="section-body">
+        <p>Споры разрешаются путём переговоров. В случае неудачи — в судах Республики Каракалпакстан в соответствии с законодательством Республики Узбекистан.</p>
+        <p>Для обращений: команда <span class="highlight">/support</span> внутри бота или <span class="highlight">+998934897111</span></p>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-num">8</div><div class="section-title">Срок действия договора</div></div>
+      <div class="section-body">
+        <p>Договор заключается на неопределённый срок. Прекращение использования бота означает расторжение договора. Исполнитель вправе прекратить оказание услуг с уведомлением за 7 дней.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section yatt">
+      <div class="section-header">
+        <div class="section-num gold">★</div>
+        <div class="section-title">Реквизиты исполнителя</div>
+      </div>
+      <div class="section-body">
+        <div class="yatt-grid">
+          <div class="yatt-item" style="grid-column: 1 / -1;">
+            <div class="yatt-label">ПОЛНОЕ НАИМЕНОВАНИЕ</div>
+            <div class="yatt-value">Каримов Шерали Зокиржон Угли</div>
+          </div>
+          <div class="yatt-item" style="grid-column: 1 / -1;">
+            <div class="yatt-label">ИДЕНТИФИКАЦИОННЫЙ НОМЕР НАЛОГОПЛАТЕЛЬЩИКА (ИНН)</div>
+            <div class="yatt-stir">502 030 566 000 29</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">ОРГАНИЗАЦИОННАЯ ФОРМА</div>
+            <div class="yatt-value">Индивидуальный предприниматель (ИП)</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">ВИД ДЕЯТЕЛЬНОСТИ</div>
+            <div class="yatt-value">Розничная торговля / Цифровые услуги</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">МЕСТО РЕГИСТРАЦИИ</div>
+            <div class="yatt-value">Республика Каракалпакстан, Амударьинский район</div>
+          </div>
+          <div class="yatt-item">
+            <div class="yatt-label">КОНТАКТ</div>
+            <div class="yatt-value">+998 93 489 71 11</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer style="margin-top:48px">
+    <p style="margin-bottom:12px">© 2025 Karimov Sherali — AI Quiz Bot</p>
+    <p>
+      <a href="./privacy.html">Maxfiylik siyosati</a> ·
+      <a href="./terms.html">Foydalanish shartlari</a> ·
+      <a href="https://t.me/quiz_import_bot">@quiz_import_bot</a>
+    </p>
+  </footer>
+
+</div>
+<script>
+function setLang(lang, btn) {
+  document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(lang).classList.add('active');
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>
+
+"""
+
 REFERRAL_BONUS = 1000  # har ikki tomonga beriladigan so'm
 
 # ============================================================
@@ -3819,21 +5099,14 @@ async def main():
             log.error(f"CLICK Complete xato: {e}")
             return aio_web.json_response({"error": -9, "error_note": str(e)})
 
-    async def serve_html(filename):
-        try:
-            with open(f"/data/static/{filename}", "r", encoding="utf-8") as f:
-                return aio_web.Response(text=f.read(), content_type="text/html")
-        except FileNotFoundError:
-            return aio_web.Response(text="<h1>Not Found</h1>", status=404, content_type="text/html")
-
     app = aio_web.Application()
     app.router.add_post("/click/prepare", click_prepare)
     app.router.add_post("/click/complete", click_complete)
-    app.router.add_get("/", lambda r: aio_web.json_response({"status": "ok"}))
+    app.router.add_get("/", lambda r: aio_web.json_response({"status": "ok", "bot": "AI Quiz Bot"}))
     app.router.add_get("/health", lambda r: aio_web.json_response({"status": "ok"}))
-    app.router.add_get("/privacy", lambda r: serve_html("privacy.html"))
-    app.router.add_get("/terms",   lambda r: serve_html("terms.html"))
-    app.router.add_get("/oferta",  lambda r: serve_html("oferta.html"))
+    app.router.add_get("/privacy", lambda r: aio_web.Response(text=PRIVACY_HTML, content_type="text/html"))
+    app.router.add_get("/terms",   lambda r: aio_web.Response(text=TERMS_HTML,   content_type="text/html"))
+    app.router.add_get("/oferta",  lambda r: aio_web.Response(text=OFERTA_HTML,  content_type="text/html"))
 
     runner = aio_web.AppRunner(app)
     await runner.setup()
@@ -3848,3 +5121,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+                     
