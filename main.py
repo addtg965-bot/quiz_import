@@ -23,6 +23,7 @@ from telethon import TelegramClient, events, Button
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from telethon.tl.functions.messages import SendMediaRequest
 from telethon.tl.types import InputMediaPoll, Poll, PollAnswer, TextWithEntities
+from click_payment import build_click_url
 
 # ============================================================
 #  SOZLAMALAR — Railway environment variables dan o'qiladi
@@ -57,6 +58,7 @@ GROQ_MODEL = _os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 ACCOUNTS_FILE = _os.environ.get("ACCOUNTS_FILE", "/data/accounts.json")
 DB_FILE       = _os.environ.get("DB_FILE",       "/data/bot.db")
+APP_URL       = _os.environ.get("APP_URL", "https://quizimport-production.up.railway.app")
 
 # /data papkasi bo'lmasa — local papkada saqlaymiz
 if not _os.path.exists("/data"):
@@ -222,6 +224,35 @@ def db_create_payment(user_id: int, card_num: str, amount: int) -> int:
     return pay_id
 
 
+def db_create_click_payment(user_id: int, amount: int) -> int:
+    """Click to'lovi uchun — karta raqamisiz yozuv yaratadi."""
+    con = get_db()
+    cur = con.cursor()
+    cur.execute(
+        """INSERT INTO payments
+           (user_id, card_num, amount, status, created_at, expires_at, payment_method)
+           VALUES (?, 'click', ?, 'pending',
+                   datetime('now'),
+                   datetime('now','+30 minutes'),
+                   'click')""",
+        (user_id, amount)
+    )
+    pay_id = cur.lastrowid
+    con.commit()
+    con.close()
+    return pay_id
+
+
+def _build_click_url_for_user(user_id: int, amount: int) -> str:
+    """Foydalanuvchi uchun Click to'lov havolasi — yangi pending yozuv yaratib URL beradi."""
+    pay_id = db_create_click_payment(user_id, amount)
+    return build_click_url(
+        amount=amount,
+        order_id=pay_id,
+        return_url=f"{APP_URL}/click/return"
+    )
+
+
 def db_get_pending(user_id: int) -> Optional[tuple]:
     """Foydalanuvchining kutilayotgan to'lovi (id, card, amount, expires)"""
     con = get_db()
@@ -304,14 +335,17 @@ def db_init():
         );
 
         CREATE TABLE IF NOT EXISTS payments (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id     INTEGER NOT NULL,
-            card_num    TEXT NOT NULL,
-            amount      INTEGER NOT NULL,
-            status      TEXT DEFAULT 'pending',
-            created_at  TEXT DEFAULT '',
-            paid_at     TEXT DEFAULT '',
-            expires_at  TEXT DEFAULT ''
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id         INTEGER NOT NULL,
+            card_num        TEXT NOT NULL,
+            amount          INTEGER NOT NULL,
+            status          TEXT DEFAULT 'pending',
+            created_at      TEXT DEFAULT '',
+            paid_at         TEXT DEFAULT '',
+            expires_at      TEXT DEFAULT '',
+            confirmed_at    TEXT DEFAULT '',
+            click_trans_id  INTEGER DEFAULT NULL,
+            payment_method  TEXT DEFAULT 'humo'
         );
 
         CREATE TABLE IF NOT EXISTS balance_log (
@@ -1117,6 +1151,82 @@ async def main():
     db_init()
     log.info(f"DB tayyor: {DB_FILE} | Jami users: {db_count_users()} ta")
 
+    # Click to'lov callback — web.py dan chaqiriladi
+    try:
+        import web as web_app
+        async def _on_click_payment(user_id: int, amount: int):
+            """Click to'lovi tasdiqlanganda foydalanuvchiga xabar yuboradi va balans qo'shadi."""
+            db_add_balance(user_id, amount, f"Click to'lov: {amount:,} so'm")
+            bal = db_get_balance(user_id)
+            tests = bal // AI_PRICE
+            prev_state = user_states.get(user_id)
+            has_pending_ai   = prev_state and prev_state.step == "wait_payment" and prev_state.fan_name
+            has_pending_file = prev_state and prev_state.step == "wait_payment_file" and prev_state.questions
+            if has_pending_file:
+                q_count = prev_state.total_questions
+                price   = calc_file_price(q_count)
+                if bal >= price:
+                    db_deduct_balance(user_id, price, f"Fayl quiz: {q_count} ta savol")
+                    bal_left = db_get_balance(user_id)
+                    prev_state.step = "ask_fan_name"
+                    user_states[user_id] = prev_state
+                    await bot_client.send_message(
+                        user_id,
+                        f"✅ **Click to'lov tasdiqlandi! +{amount:,} so'm**\n\n"
+                        f"📂 {q_count} ta savol tayyor\n"
+                        f"💰 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
+                        f"Fan nomini yozing:",
+                        buttons=[[Button.text("🔙 Bosh menyu")]]
+                    )
+                else:
+                    await bot_client.send_message(
+                        user_id,
+                        f"✅ +{amount:,} so'm | Balans: {bal:,} so'm\n"
+                        f"⚠️ Hali yetarli emas. Kerak: {price:,} so'm",
+                        buttons=[[Button.text(f"⚡ Click: {price-bal:,} so'm to'lash"),
+                                  Button.text("🔙 Bosh menyu")]]
+                    )
+            elif has_pending_ai:
+                await bot_client.send_message(
+                    user_id,
+                    f"✅ **Click to'lov tasdiqlandi! +{amount:,} so'm**\n\n"
+                    f"💼 Balans: **{bal:,} so'm**\n\n"
+                    f"🤖 Oldingi sozlamalar:\n"
+                    f"📚 {prev_state.fan_name}"
+                    f"{f' | 📌 {prev_state.topic}' if prev_state.topic else ''}\n"
+                    f"🔢 {prev_state.q_count} ta | 🎯 {prev_state.difficulty}\n\n"
+                    f"⏳ AI test tuzilmoqda..."
+                )
+                try:
+                    qs = await generate_questions(
+                        prev_state.fan_name, prev_state.q_count,
+                        prev_state.lang, prev_state.difficulty, prev_state.topic
+                    )
+                    if not qs:
+                        await bot_client.send_message(user_id, "❌ AI savol yarata olmadi!")
+                        return
+                    db_deduct_balance(user_id, AI_PRICE, f"AI test: {prev_state.fan_name}")
+                    bal_left = db_get_balance(user_id)
+                    prev_state.questions = qs
+                    prev_state.total_questions = len(qs)
+                    prev_state.step = "ask_fan_name"
+                    user_states[user_id] = prev_state
+                except Exception as e:
+                    log.error("Click callback AI xatosi: %s", e)
+            else:
+                await bot_client.send_message(
+                    user_id,
+                    f"✅ **Click to'lov qabul qilindi!**\n\n"
+                    f"💰 +{amount:,} so'm\n"
+                    f"💼 Balans: **{bal:,} so'm**\n"
+                    f"🤖 {tests} ta AI test tuzish mumkin!",
+                    buttons=[[Button.text("🔙 Bosh menyu")]]
+                )
+        web_app.set_payment_callback(_on_click_payment)
+        log.info("Click payment callback o'rnatildi ✅")
+    except Exception as e:
+        log.warning("web.py yuklanmadi (Click callback o'rnatilmadi): %s", e)
+
     for phone in load_phones():
         try:
             sess_dir = _os.path.dirname(DB_FILE)
@@ -1498,7 +1608,6 @@ async def main():
 
         # User harakatini log guruhiga yuborish
         await log_action(uid, uname, full_name, f"✉️ {text[:150]}")
-        log.info(f"on_msg: uid={uid}, adm={adm}, text={repr(text[:80])}")
 
         # Admin oraliq holat
         if astate.get("step") == "wait_phone":
@@ -2212,8 +2321,6 @@ async def main():
     async def admin_btns(event):
         uid = event.sender_id
         text = event.text.strip()
-        adm = is_admin(uid)
-        log.info(f"admin_btns: uid={uid}, adm={adm}, text={text[:50]}")
 
         if text == "👀 Faol foydalanuvchilar":
             if not active_users:
@@ -2718,13 +2825,15 @@ async def main():
     async def cmd_pay(event):
         uid = event.sender_id
         bal = db_get_balance(uid)
+        click_url = _build_click_url_for_user(uid, AI_PRICE)
         await event.respond(
             f"💳 **To'lov**\n\n"
             f"💰 Hozirgi balans: **{bal:,} so'm**\n"
             f"🤖 1 ta AI test narxi: **{AI_PRICE:,} so'm**\n\n"
-            f"Karta orqali to'lash uchun tugmani bosing:",
+            f"To'lov usulini tanlang:",
             buttons=[
-                [Button.text(f"💳 {AI_PRICE:,} so'm to'lash")],
+                [Button.text(f"💳 {AI_PRICE:,} so'm to'lash (Humo karta)")],
+                [Button.url("⚡ Click orqali to'lash", click_url)],
                 [Button.text("💰 Balansni ko'rish")],
                 [Button.text("🔙 Bosh menyu")],
             ]
