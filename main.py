@@ -23,7 +23,6 @@ from telethon import TelegramClient, events, Button
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 from telethon.tl.functions.messages import SendMediaRequest
 from telethon.tl.types import InputMediaPoll, Poll, PollAnswer, TextWithEntities
-from click_payment import build_click_url
 
 # ============================================================
 #  SOZLAMALAR — Railway environment variables dan o'qiladi
@@ -58,7 +57,6 @@ GROQ_MODEL = _os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 ACCOUNTS_FILE = _os.environ.get("ACCOUNTS_FILE", "/data/accounts.json")
 DB_FILE       = _os.environ.get("DB_FILE",       "/data/bot.db")
-APP_URL       = _os.environ.get("APP_URL", "https://quizimport-production.up.railway.app")
 
 # /data papkasi bo'lmasa — local papkada saqlaymiz
 if not _os.path.exists("/data"):
@@ -224,35 +222,6 @@ def db_create_payment(user_id: int, card_num: str, amount: int) -> int:
     return pay_id
 
 
-def db_create_click_payment(user_id: int, amount: int) -> int:
-    """Click to'lovi uchun — karta raqamisiz yozuv yaratadi."""
-    con = get_db()
-    cur = con.cursor()
-    cur.execute(
-        """INSERT INTO payments
-           (user_id, card_num, amount, status, created_at, expires_at, payment_method)
-           VALUES (?, 'click', ?, 'pending',
-                   datetime('now'),
-                   datetime('now','+30 minutes'),
-                   'click')""",
-        (user_id, amount)
-    )
-    pay_id = cur.lastrowid
-    con.commit()
-    con.close()
-    return pay_id
-
-
-def _build_click_url_for_user(user_id: int, amount: int) -> str:
-    """Foydalanuvchi uchun Click to'lov havolasi — yangi pending yozuv yaratib URL beradi."""
-    pay_id = db_create_click_payment(user_id, amount)
-    return build_click_url(
-        amount=amount,
-        order_id=pay_id,
-        return_url=f"{APP_URL}/click/return"
-    )
-
-
 def db_get_pending(user_id: int) -> Optional[tuple]:
     """Foydalanuvchining kutilayotgan to'lovi (id, card, amount, expires)"""
     con = get_db()
@@ -282,6 +251,16 @@ def db_confirm_payment(pay_id: int) -> Optional[tuple]:
         )
         con.commit()
     con.close()
+
+    # Hamkor komissiyasi — to'lov summасidan 20%
+    if row:
+        user_id, amount, _ = row
+        partner_id = db_get_referred_by(user_id)
+        if partner_id:
+            commission = int(amount * PARTNER_PAY_PERCENT / 100)
+            if commission > 0:
+                db_add_partner_balance(partner_id, commission, f"To'lov komissiyasi: user {user_id}, {amount} so'm")
+
     return row
 
 
@@ -335,17 +314,14 @@ def db_init():
         );
 
         CREATE TABLE IF NOT EXISTS payments (
-            id              INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id         INTEGER NOT NULL,
-            card_num        TEXT NOT NULL,
-            amount          INTEGER NOT NULL,
-            status          TEXT DEFAULT 'pending',
-            created_at      TEXT DEFAULT '',
-            paid_at         TEXT DEFAULT '',
-            expires_at      TEXT DEFAULT '',
-            confirmed_at    TEXT DEFAULT '',
-            click_trans_id  INTEGER DEFAULT NULL,
-            payment_method  TEXT DEFAULT 'humo'
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            card_num    TEXT NOT NULL,
+            amount      INTEGER NOT NULL,
+            status      TEXT DEFAULT 'pending',
+            created_at  TEXT DEFAULT '',
+            paid_at     TEXT DEFAULT '',
+            expires_at  TEXT DEFAULT ''
         );
 
         CREATE TABLE IF NOT EXISTS balance_log (
@@ -401,6 +377,21 @@ def db_init():
             con.commit()
         except Exception:
             pass
+    # Hamkorlik jadvallari
+    db_init_partner_tables(con)
+
+    # CLICK invoicelar jadvali
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS click_invoices (
+            id                INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id           INTEGER NOT NULL,
+            amount            INTEGER NOT NULL,
+            merchant_trans_id TEXT UNIQUE NOT NULL,
+            status            TEXT DEFAULT 'pending',
+            created_at        TEXT DEFAULT '',
+            paid_at           TEXT DEFAULT ''
+        )
+    """)
     con.commit()
     con.close()
 
@@ -494,6 +485,79 @@ def db_count_user_quizzes(user_id: int) -> int:
 # ============================================================
 REFERRAL_BONUS = 1000  # har ikki tomonga beriladigan so'm
 
+# ============================================================
+#  CLICK TO'LOV SOZLAMALARI
+# ============================================================
+CLICK_SERVICE_ID       = _os.environ.get("CLICK_SERVICE_ID", "")
+CLICK_SECRET_KEY       = _os.environ.get("CLICK_SECRET_KEY", "")
+CLICK_MERCHANT_ID      = _os.environ.get("CLICK_MERCHANT_ID", "")
+CLICK_MERCHANT_USER_ID = _os.environ.get("CLICK_MERCHANT_USER_ID", "")
+SERVER_PORT            = int(_os.environ.get("SERVER_PORT", "8080"))
+CLICK_BASE_URL         = "https://my.click.uz/services/pay"
+
+def create_click_url(amount: int, merchant_trans_id: str) -> str:
+    return (
+        f"{CLICK_BASE_URL}"
+        f"?service_id={CLICK_SERVICE_ID}"
+        f"&merchant_id={CLICK_MERCHANT_ID}"
+        f"&amount={amount}"
+        f"&transaction_param={merchant_trans_id}"
+        f"&return_url=https://t.me/quiz_import_bot"
+    )
+
+def verify_click_signature(data: dict, action: int) -> bool:
+    try:
+        sign_string = "{}{}{}{}{}{}{}".format(
+            data.get("click_trans_id", ""),
+            CLICK_SERVICE_ID,
+            CLICK_SECRET_KEY,
+            data.get("merchant_trans_id", ""),
+            data.get("merchant_prepare_id", "") if action == 1 else "",
+            data.get("amount", ""),
+            data.get("action", ""),
+        )
+        expected = __import__('hashlib').md5(sign_string.encode("utf-8")).hexdigest()
+        return expected == data.get("sign_string", "")
+    except Exception as e:
+        log.error(f"Signature xato: {e}")
+        return False
+
+def db_create_click_invoice(user_id: int, amount: int) -> str:
+    import uuid, time
+    merchant_trans_id = f"quiz_{user_id}_{int(time.time())}_{uuid.uuid4().hex[:6]}"
+    con = get_db()
+    con.execute("""
+        INSERT INTO click_invoices (user_id, amount, merchant_trans_id, status, created_at)
+        VALUES (?, ?, ?, 'pending', datetime('now'))
+    """, (user_id, amount, merchant_trans_id))
+    con.commit()
+    con.close()
+    return merchant_trans_id
+
+def db_get_click_invoice(merchant_trans_id: str) -> Optional[tuple]:
+    con = get_db()
+    row = con.execute("""
+        SELECT id, user_id, amount, status FROM click_invoices
+        WHERE merchant_trans_id = ?
+    """, (merchant_trans_id,)).fetchone()
+    con.close()
+    return row
+
+def db_confirm_click_invoice(merchant_trans_id: str) -> Optional[tuple]:
+    con = get_db()
+    row = con.execute("""
+        SELECT user_id, amount FROM click_invoices
+        WHERE merchant_trans_id = ? AND status = 'pending'
+    """, (merchant_trans_id,)).fetchone()
+    if row:
+        con.execute("""
+            UPDATE click_invoices SET status='paid', paid_at=datetime('now')
+            WHERE merchant_trans_id = ?
+        """, (merchant_trans_id,))
+        con.commit()
+    con.close()
+    return row
+
 def db_is_new_user(user_id: int) -> bool:
     """Foydalanuvchi avval kelganmi?"""
     con = get_db()
@@ -547,6 +611,150 @@ def db_already_referred(inviter_id: int, invited_id: int) -> bool:
     ).fetchone()
     con.close()
     return row is not None
+
+
+# ============================================================
+#  HAMKORLIK TIZIMI
+# ============================================================
+PARTNER_JOIN_BONUS  = 50     # har bir jalb qilgan foydalanuvchi uchun (so'm)
+PARTNER_PAY_PERCENT = 20     # to'lovdan foiz (%)
+PARTNER_MIN_WITHDRAW = 15000 # minimal chiqarish (so'm)
+
+def db_init_partner_tables(con):
+    """Hamkorlik jadvallarini yaratish (db_init ichida chaqiriladi)"""
+    con.executescript("""
+        CREATE TABLE IF NOT EXISTS partner_applications (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id     INTEGER NOT NULL,
+            username    TEXT DEFAULT '',
+            full_name   TEXT DEFAULT '',
+            comment     TEXT DEFAULT '',
+            status      TEXT DEFAULT 'pending',
+            created_at  TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS partners (
+            user_id     INTEGER PRIMARY KEY,
+            partner_balance INTEGER DEFAULT 0,
+            total_earned    INTEGER DEFAULT 0,
+            total_refs      INTEGER DEFAULT 0,
+            created_at  TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS partner_log (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            partner_id  INTEGER NOT NULL,
+            amount      INTEGER NOT NULL,
+            reason      TEXT DEFAULT '',
+            created_at  TEXT DEFAULT ''
+        );
+
+        CREATE TABLE IF NOT EXISTS partner_withdrawals (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            partner_id  INTEGER NOT NULL,
+            amount      INTEGER NOT NULL,
+            card_num    TEXT DEFAULT '',
+            status      TEXT DEFAULT 'pending',
+            created_at  TEXT DEFAULT ''
+        );
+    """)
+
+def db_is_partner(user_id: int) -> bool:
+    con = get_db()
+    row = con.execute("SELECT user_id FROM partners WHERE user_id=?", (user_id,)).fetchone()
+    con.close()
+    return row is not None
+
+def db_get_partner_ids() -> list:
+    """PARTNER_IDS env + DB dan"""
+    env_ids = [int(x) for x in _os.environ.get("PARTNER_IDS", "").split(",") if x.strip().isdigit()]
+    con = get_db()
+    rows = con.execute("SELECT user_id FROM partners").fetchall()
+    con.close()
+    db_ids = [r[0] for r in rows]
+    return list(set(env_ids + db_ids))
+
+def db_add_partner(user_id: int):
+    con = get_db()
+    con.execute("""
+        INSERT OR IGNORE INTO partners (user_id, partner_balance, total_earned, total_refs, created_at)
+        VALUES (?, 0, 0, 0, datetime('now'))
+    """, (user_id,))
+    con.commit()
+    con.close()
+
+def db_get_partner_info(user_id: int) -> Optional[tuple]:
+    """(user_id, partner_balance, total_earned, total_refs)"""
+    con = get_db()
+    row = con.execute(
+        "SELECT user_id, partner_balance, total_earned, total_refs FROM partners WHERE user_id=?",
+        (user_id,)
+    ).fetchone()
+    con.close()
+    return row
+
+def db_add_partner_balance(partner_id: int, amount: int, reason: str = ""):
+    con = get_db()
+    con.execute(
+        "UPDATE partners SET partner_balance = partner_balance + ?, total_earned = total_earned + ? WHERE user_id=?",
+        (amount, amount, partner_id)
+    )
+    con.execute(
+        "INSERT INTO partner_log (partner_id, amount, reason, created_at) VALUES (?, ?, ?, datetime('now'))",
+        (partner_id, amount, reason)
+    )
+    con.commit()
+    con.close()
+
+def db_partner_add_ref(partner_id: int):
+    con = get_db()
+    con.execute("UPDATE partners SET total_refs = total_refs + 1 WHERE user_id=?", (partner_id,))
+    con.commit()
+    con.close()
+
+def db_partner_withdraw(partner_id: int, amount: int, card_num: str) -> bool:
+    con = get_db()
+    row = con.execute("SELECT partner_balance FROM partners WHERE user_id=?", (partner_id,)).fetchone()
+    if not row or row[0] < amount:
+        con.close()
+        return False
+    con.execute("UPDATE partners SET partner_balance = partner_balance - ? WHERE user_id=?", (amount, partner_id))
+    con.execute(
+        "INSERT INTO partner_withdrawals (partner_id, amount, card_num, status, created_at) VALUES (?, ?, ?, 'pending', datetime('now'))",
+        (partner_id, amount, card_num)
+    )
+    con.commit()
+    con.close()
+    return True
+
+def db_save_partner_application(user_id: int, username: str, full_name: str, comment: str):
+    con = get_db()
+    con.execute("""
+        INSERT INTO partner_applications (user_id, username, full_name, comment, status, created_at)
+        VALUES (?, ?, ?, ?, 'pending', datetime('now'))
+    """, (user_id, username, full_name, comment))
+    con.commit()
+    con.close()
+
+def db_has_pending_application(user_id: int) -> bool:
+    con = get_db()
+    row = con.execute(
+        "SELECT id FROM partner_applications WHERE user_id=? AND status='pending'", (user_id,)
+    ).fetchone()
+    con.close()
+    return row is not None
+
+def db_get_referred_by(user_id: int) -> Optional[int]:
+    """Bu foydalanuvchi qaysi PARTNER orqali kelgan?"""
+    con = get_db()
+    row = con.execute("SELECT invited_by FROM users WHERE user_id=?", (user_id,)).fetchone()
+    con.close()
+    if not row or not row[0]:
+        return None
+    partner_id = row[0]
+    if db_is_partner(partner_id):
+        return partner_id
+    return None
 
 
 # ============================================================
@@ -1151,82 +1359,6 @@ async def main():
     db_init()
     log.info(f"DB tayyor: {DB_FILE} | Jami users: {db_count_users()} ta")
 
-    # Click to'lov callback — web.py dan chaqiriladi
-    try:
-        import web as web_app
-        async def _on_click_payment(user_id: int, amount: int):
-            """Click to'lovi tasdiqlanganda foydalanuvchiga xabar yuboradi va balans qo'shadi."""
-            db_add_balance(user_id, amount, f"Click to'lov: {amount:,} so'm")
-            bal = db_get_balance(user_id)
-            tests = bal // AI_PRICE
-            prev_state = user_states.get(user_id)
-            has_pending_ai   = prev_state and prev_state.step == "wait_payment" and prev_state.fan_name
-            has_pending_file = prev_state and prev_state.step == "wait_payment_file" and prev_state.questions
-            if has_pending_file:
-                q_count = prev_state.total_questions
-                price   = calc_file_price(q_count)
-                if bal >= price:
-                    db_deduct_balance(user_id, price, f"Fayl quiz: {q_count} ta savol")
-                    bal_left = db_get_balance(user_id)
-                    prev_state.step = "ask_fan_name"
-                    user_states[user_id] = prev_state
-                    await bot_client.send_message(
-                        user_id,
-                        f"✅ **Click to'lov tasdiqlandi! +{amount:,} so'm**\n\n"
-                        f"📂 {q_count} ta savol tayyor\n"
-                        f"💰 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
-                        f"Fan nomini yozing:",
-                        buttons=[[Button.text("🔙 Bosh menyu")]]
-                    )
-                else:
-                    await bot_client.send_message(
-                        user_id,
-                        f"✅ +{amount:,} so'm | Balans: {bal:,} so'm\n"
-                        f"⚠️ Hali yetarli emas. Kerak: {price:,} so'm",
-                        buttons=[[Button.text(f"⚡ Click: {price-bal:,} so'm to'lash"),
-                                  Button.text("🔙 Bosh menyu")]]
-                    )
-            elif has_pending_ai:
-                await bot_client.send_message(
-                    user_id,
-                    f"✅ **Click to'lov tasdiqlandi! +{amount:,} so'm**\n\n"
-                    f"💼 Balans: **{bal:,} so'm**\n\n"
-                    f"🤖 Oldingi sozlamalar:\n"
-                    f"📚 {prev_state.fan_name}"
-                    f"{f' | 📌 {prev_state.topic}' if prev_state.topic else ''}\n"
-                    f"🔢 {prev_state.q_count} ta | 🎯 {prev_state.difficulty}\n\n"
-                    f"⏳ AI test tuzilmoqda..."
-                )
-                try:
-                    qs = await generate_questions(
-                        prev_state.fan_name, prev_state.q_count,
-                        prev_state.lang, prev_state.difficulty, prev_state.topic
-                    )
-                    if not qs:
-                        await bot_client.send_message(user_id, "❌ AI savol yarata olmadi!")
-                        return
-                    db_deduct_balance(user_id, AI_PRICE, f"AI test: {prev_state.fan_name}")
-                    bal_left = db_get_balance(user_id)
-                    prev_state.questions = qs
-                    prev_state.total_questions = len(qs)
-                    prev_state.step = "ask_fan_name"
-                    user_states[user_id] = prev_state
-                except Exception as e:
-                    log.error("Click callback AI xatosi: %s", e)
-            else:
-                await bot_client.send_message(
-                    user_id,
-                    f"✅ **Click to'lov qabul qilindi!**\n\n"
-                    f"💰 +{amount:,} so'm\n"
-                    f"💼 Balans: **{bal:,} so'm**\n"
-                    f"🤖 {tests} ta AI test tuzish mumkin!",
-                    buttons=[[Button.text("🔙 Bosh menyu")]]
-                )
-        web_app.set_payment_callback(_on_click_payment)
-        log.info("Click payment callback o'rnatildi ✅")
-    except Exception as e:
-        log.warning("web.py yuklanmadi (Click callback o'rnatilmadi): %s", e)
-
     for phone in load_phones():
         try:
             sess_dir = _os.path.dirname(DB_FILE)
@@ -1263,7 +1395,8 @@ async def main():
     # ============================================================
     #  KNOPKALAR
     # ============================================================
-    def main_menu(adm=False):
+    def main_menu(adm=False, uid=None):
+        is_partner = db_is_partner(uid) if uid else False
         btns = [
             [Button.text("🤖 AI test tuzish",       resize=True)],
             [Button.text("📂 Fayldan quiz yaratish", resize=True),
@@ -1274,6 +1407,10 @@ async def main():
             [Button.text("🎁 Referal",               resize=True),
              Button.text("❓ Yordam",                resize=True)],
         ]
+        if is_partner:
+            btns.append([Button.text("🤝 Hamkor paneli", resize=True)])
+        else:
+            btns.append([Button.text("🤝 Hamkor bo'lish", resize=True)])
         if adm: btns.append([Button.text("🔧 Admin panel", resize=True)])
         return btns
 
@@ -1324,6 +1461,32 @@ async def main():
     #  HANDLERLAR
     # ============================================================
 
+    @bot_client.on(events.NewMessage(pattern=r"/addpartner(?:\s+(\d+))?"))
+    async def cmd_addpartner(event):
+        if event.sender_id not in ADMIN_IDS:
+            return
+        match = re.match(r'/addpartner\s+(\d+)', event.raw_text.strip())
+        if not match:
+            await event.respond("❌ Ishlatish: `/addpartner USER_ID`")
+            return
+        target_uid = int(match.group(1))
+        db_add_partner(target_uid)
+        await event.respond(f"✅ `{target_uid}` hamkor sifatida qo'shildi!")
+        try:
+            bot_me3 = await bot_client.get_me()
+            plink = f"https://t.me/{bot_me3.username}?start=ref_{target_uid}"
+            await bot_client.send_message(
+                target_uid,
+                f"🎉 **Tabriklaymiz! Siz hamkor bo'ldingiz!**\n\n"
+                f"🔗 Sizning shaxsiy havolangiz:\n`{plink}`\n\n"
+                f"📢 Bu havolani kanal, guruh va ijtimoiy tarmoqlarda ulashing!\n\n"
+                f"💰 Har jalb: +{PARTNER_JOIN_BONUS} so'm\n"
+                f"💳 Har to'lovdan: {PARTNER_PAY_PERCENT}%\n\n"
+                f"Hamkor panelini ochish uchun pastdagi tugmani bosing 👇"
+            )
+        except Exception as e:
+            await event.respond(f"⚠️ Foydalanuvchiga xabar yuborilmadi: {e}")
+
     @bot_client.on(events.NewMessage(pattern="/start"))
     async def cmd_start(event):
         uid = event.sender_id
@@ -1350,6 +1513,12 @@ async def main():
                 db_add_balance(inviter_id, REFERRAL_BONUS, f"Referal bonusi — {uid} qo'shildi")
                 ref_count = db_get_referral_count(inviter_id)
                 ref_bonus_msg = f"\n\n🎁 **Referal bonus: +{REFERRAL_BONUS:,} so'm** balansga qo'shildi!"
+
+                # Agar taklif qiluvchi HAMKOR bo'lsa — +50 so'm hamkor balansiga
+                if db_is_partner(inviter_id):
+                    db_add_partner_balance(inviter_id, PARTNER_JOIN_BONUS, f"Yangi foydalanuvchi: {uid}")
+                    db_partner_add_ref(inviter_id)
+
                 try:
                     await bot_client.send_message(
                         inviter_id,
@@ -1382,7 +1551,7 @@ async def main():
             f"🤖 AI yordamida istalgan fandan test tuzing!\n"
             f"📁 Fayl yuklang yoki matn kiriting{ref_bonus_msg}\n\n"
             f"Boshlash uchun tugmani bosing 👇",
-            buttons=main_menu(is_admin(uid))
+            buttons=main_menu(is_admin(uid), uid)
         )
 
     @bot_client.on(events.NewMessage(func=lambda e: e.file))
@@ -1585,7 +1754,7 @@ async def main():
             try:
                 await msg.edit(f"❌ Xato: {e}")
             except Exception:
-                await event.respond(f"❌ Xato: {e}", buttons=main_menu(adm))
+                await event.respond(f"❌ Xato: {e}", buttons=main_menu(adm, uid))
 
     @bot_client.on(events.NewMessage(func=lambda e: not e.file and not e.text.startswith("/")))
     async def on_msg(event):
@@ -1692,7 +1861,7 @@ async def main():
         if text == "🔙 Bosh menyu":
             user_states[uid] = UserState()
             admin_states.pop(uid, None)
-            await event.respond("🏠 Bosh menyu", buttons=main_menu(adm))
+            await event.respond("🏠 Bosh menyu", buttons=main_menu(adm, uid))
             return
 
         if text == "📋 Mening quizlarim":
@@ -1755,6 +1924,166 @@ async def main():
                 buttons=[[Button.text("🔙 Bosh menyu")]],
                 link_preview=False
             )
+            return
+
+        # ---- HAMKOR BO'LISH ----
+        if text == "🤝 Hamkor bo'lish":
+            if db_is_partner(uid):
+                await event.respond("✅ Siz allaqachon hamkorsiz!", buttons=main_menu(adm, uid))
+                return
+            await event.respond(
+                "🤝 **HAMKORLIK DASTURI**\n\n"
+                "━━━━━━━━━━━━━━━━━━━\n"
+                "📢 Botimizni reklama qilib daromad toping!\n\n"
+                "💰 **Daromad tizimi:**\n"
+                f"  • Har jalb qilgan foydalanuvchi: **+{PARTNER_JOIN_BONUS} so'm**\n"
+                f"  • Har to'lovdan: **{PARTNER_PAY_PERCENT}%** komissiya\n\n"
+                "🔗 **Qanday ishlaydi:**\n"
+                "  1. Ariza qoldiring\n"
+                "  2. Admin tasdiqlaydi\n"
+                "  3. Maxsus havola olasiz\n"
+                "  4. Havolani ijtimoiy tarmoqlarda ulashing\n"
+                "  5. Balansni kartaga chiqaring (min 15 000 so'm)\n\n"
+                "━━━━━━━━━━━━━━━━━━━\n"
+                "📌 Ariza qoldirishni xohlaysizmi?",
+                buttons=[
+                    [Button.text("📝 Ariza qoldirish")],
+                    [Button.text("🔙 Bosh menyu")],
+                ]
+            )
+            return
+
+        if text == "📝 Ariza qoldirish":
+            if db_is_partner(uid):
+                await event.respond("✅ Siz allaqachon hamkorsiz!", buttons=main_menu(adm, uid))
+                return
+            if db_has_pending_application(uid):
+                await event.respond(
+                    "⏳ **Arizangiz ko'rib chiqilmoqda.**\n\nAdmin tez orada javob beradi!",
+                    buttons=[[Button.text("🔙 Bosh menyu")]]
+                )
+                return
+            user_states[uid] = UserState(step="wait_partner_comment")
+            await event.respond(
+                "📝 **Ariza qoldirish**\n\n"
+                "O'zingiz haqingizda qisqacha yozing:\n"
+                "_(Qayerda reklama qilmoqchisiz, auditoriyangiz qancha va h.k.)_",
+                buttons=[[Button.text("🔙 Bosh menyu")]]
+            )
+            return
+
+        if state.step == "wait_partner_comment":
+            comment = text
+            sender2 = await event.get_sender()
+            fn = getattr(sender2, 'first_name', '') or ''
+            ln = getattr(sender2, 'last_name', '') or ''
+            un = getattr(sender2, 'username', '') or ''
+            fn2 = f"{fn} {ln}".strip() or un or str(uid)
+            db_save_partner_application(uid, un, fn2, comment)
+            user_states[uid] = UserState()
+            # Adminga xabar
+            uname_str = f"@{un}" if un else f"ID: {uid}"
+            await notify_admin(
+                f"🤝 **Yangi hamkorlik arizasi**\n\n"
+                f"👤 {fn2} ({uname_str})\n"
+                f"🆔 `{uid}`\n\n"
+                f"💬 Ariza matni:\n{comment}\n\n"
+                f"✅ Tasdiqlash uchun: `/addpartner {uid}`"
+            )
+            await event.respond(
+                "✅ **Arizangiz qabul qilindi!**\n\n"
+                "Admin tez orada ko'rib chiqadi va javob beradi.\n"
+                "Kuting 🙏",
+                buttons=[[Button.text("🔙 Bosh menyu")]]
+            )
+            return
+
+        # ---- HAMKOR PANELI ----
+        if text == "🤝 Hamkor paneli":
+            if not db_is_partner(uid):
+                await event.respond("⛔ Siz hamkor emassiz!", buttons=main_menu(adm, uid))
+                return
+            pinfo = db_get_partner_info(uid)
+            if not pinfo:
+                await event.respond("❌ Ma'lumot topilmadi!", buttons=main_menu(adm, uid))
+                return
+            _, pbal, total_earned, total_refs = pinfo
+            bot_me2 = await bot_client.get_me()
+            plink = f"https://t.me/{bot_me2.username}?start=ref_{uid}"
+            await event.respond(
+                f"🤝 **HAMKOR PANELI**\n\n"
+                f"━━━━━━━━━━━━━━━━━━━\n"
+                f"💰 **Hamkor balansi:** {pbal:,} so'm\n"
+                f"📈 **Jami daromad:** {total_earned:,} so'm\n"
+                f"👥 **Jalb qilganlar:** {total_refs} ta\n"
+                f"━━━━━━━━━━━━━━━━━━━\n\n"
+                f"🔗 **Sizning havolangiz:**\n`{plink}`\n\n"
+                f"📢 Bu havolani kanal, guruh yoki ijtimoiy tarmoqlarda ulashing!\n\n"
+                f"💸 Minimal chiqarish: {PARTNER_MIN_WITHDRAW:,} so'm",
+                buttons=[
+                    [Button.text("💸 Pul chiqarish")],
+                    [Button.text("🔙 Bosh menyu")],
+                ]
+            )
+            return
+
+        if text == "💸 Pul chiqarish":
+            if not db_is_partner(uid):
+                return
+            pinfo = db_get_partner_info(uid)
+            pbal = pinfo[1] if pinfo else 0
+            if pbal < PARTNER_MIN_WITHDRAW:
+                await event.respond(
+                    f"❌ **Balans yetarli emas!**\n\n"
+                    f"💰 Balansda: {pbal:,} so'm\n"
+                    f"📌 Minimal: {PARTNER_MIN_WITHDRAW:,} so'm\n\n"
+                    f"Ko'proq foydalanuvchi jalb qiling!",
+                    buttons=[
+                        [Button.text("🤝 Hamkor paneli")],
+                        [Button.text("🔙 Bosh menyu")],
+                    ]
+                )
+                return
+            user_states[uid] = UserState(step="wait_partner_card")
+            await event.respond(
+                f"💸 **Pul chiqarish**\n\n"
+                f"💰 Mavjud: {pbal:,} so'm\n\n"
+                f"Karta raqamingizni yuboring:\n_(16 raqam, masalan: 8600 1234 5678 9012)_",
+                buttons=[[Button.text("🔙 Bosh menyu")]]
+            )
+            return
+
+        if state.step == "wait_partner_card":
+            if not db_is_partner(uid):
+                return
+            card_input = re.sub(r'\s', '', text)
+            if not re.match(r'^\d{16}$', card_input):
+                await event.respond("❌ Noto'g'ri karta raqami! 16 ta raqam kiriting:")
+                return
+            pinfo = db_get_partner_info(uid)
+            pbal = pinfo[1] if pinfo else 0
+            formatted_card = ' '.join([card_input[i:i+4] for i in range(0, 16, 4)])
+            ok = db_partner_withdraw(uid, pbal, formatted_card)
+            user_states[uid] = UserState()
+            if ok:
+                sender3 = await event.get_sender()
+                un3 = getattr(sender3, 'username', '') or ''
+                ustr = f"@{un3}" if un3 else f"ID: {uid}"
+                await notify_admin(
+                    f"💸 **Hamkor chiqarish so'rovi**\n\n"
+                    f"👤 {ustr} (`{uid}`)\n"
+                    f"💰 Summa: **{pbal:,} so'm**\n"
+                    f"💳 Karta: `{formatted_card}`\n\n"
+                    f"Iltimos o'tkazing!"
+                )
+                await event.respond(
+                    f"✅ **So'rov yuborildi!**\n\n"
+                    f"💰 {pbal:,} so'm → `{formatted_card}`\n\n"
+                    f"Admin tez orada o'tkazadi.",
+                    buttons=[[Button.text("🔙 Bosh menyu")]]
+                )
+            else:
+                await event.respond("❌ Xato yuz berdi!", buttons=[[Button.text("🔙 Bosh menyu")]])
             return
 
         if text == "❓ Yordam":
@@ -1921,7 +2250,7 @@ async def main():
                     )
                     if not qs:
                         await event.respond("❌ AI savol yarata olmadi! Qayta urining.",
-                            buttons=main_menu(adm)); return
+                            buttons=main_menu(adm, uid)); return
 
                     state.questions = qs
                     state.total_questions = len(qs)
@@ -2065,7 +2394,7 @@ async def main():
         idx   = state.__dict__.get('manual_q_idx', 0)
         if idx >= len(lines):
             if not state.questions:
-                await event.respond("❌ Savol qo'shilmadi!", buttons=main_menu(is_admin(uid)))
+                await event.respond("❌ Savol qo'shilmadi!", buttons=main_menu(is_admin(uid), uid))
                 user_states[uid] = UserState(); return
             state.step = "ask_fan_name"
             state.total_questions = len(state.questions)
@@ -2173,7 +2502,7 @@ async def main():
         uid = event.sender_id
         if uid in admin_states:
             admin_states.pop(uid)
-            await event.respond("❌ Bekor qilindi.", buttons=main_menu(is_admin(uid)))
+            await event.respond("❌ Bekor qilindi.", buttons=main_menu(is_admin(uid), uid))
         else:
             await event.respond("Hech narsa bekor qilinmadi.")
 
@@ -2825,15 +3154,12 @@ async def main():
     async def cmd_pay(event):
         uid = event.sender_id
         bal = db_get_balance(uid)
-        click_url = _build_click_url_for_user(uid, AI_PRICE)
         await event.respond(
             f"💳 **To'lov**\n\n"
-            f"💰 Hozirgi balans: **{bal:,} so'm**\n"
-            f"🤖 1 ta AI test narxi: **{AI_PRICE:,} so'm**\n\n"
+            f"💰 Hozirgi balans: **{bal:,} so'm**\n\n"
             f"To'lov usulini tanlang:",
             buttons=[
-                [Button.text(f"💳 {AI_PRICE:,} so'm to'lash (Humo karta)")],
-                [Button.url("⚡ Click orqali to'lash", click_url)],
+                [Button.text("💳 CLICK orqali to'lash")],
                 [Button.text("💰 Balansni ko'rish")],
                 [Button.text("🔙 Bosh menyu")],
             ]
@@ -2856,60 +3182,66 @@ async def main():
         )
 
     @bot_client.on(events.NewMessage(
-        func=lambda e: not e.file and
-        bool(re.match(r'^💳 [\d\s,.]+ so\'m to\'lash$', e.text.strip()))
+        func=lambda e: not e.file and e.text.strip() == "💳 CLICK orqali to'lash"
     ))
-    async def pay_request(event):
-        uid  = event.sender_id
-        text = event.text.strip()
-
-        # Summani xabar matnidan ajratib olamiz
-        m = re.search(r'([\d\s,.]+)\s*so\'m', text)
-        try:
-            pay_amount = int(m.group(1).replace(' ','').replace(',','').replace('.','')) if m else AI_PRICE
-        except Exception:
-            pay_amount = AI_PRICE
-
-        # Avvalgi kutilayotgan to'lov bormi?
-        pending = db_get_pending(uid)
-        if pending:
-            pay_id, card_num, amount, expires = pending
-            await event.respond(
-                f"⏳ **Kutilayotgan to'lov mavjud**\n\n"
-                f"💳 Karta: `{card_num}`\n"
-                f"💰 Summa: **{amount:,} so'm**\n"
-                f"⏰ Muddat: {expires[11:16]}\n\n"
-                f"Shu kartaga {amount:,} so'm o'tkazing!",
-                buttons=[[Button.text("🔙 Bosh menyu")]]
-            )
-            return
-
-        # Bo'sh karta olish
-        card = get_free_card(uid)
-        if not card:
-            await event.respond(
-                "⚠️ Hozir barcha kartalar band!\n"
-                "Bir daqiqadan so'ng qayta urining.",
-                buttons=[[Button.text("🔙 Bosh menyu")]]
-            )
-            return
-
-        # To'lov yaratish
-        pay_id = db_create_payment(uid, card, pay_amount)
-
+    async def pay_click_start(event):
+        uid = event.sender_id
+        bal = db_get_balance(uid)
+        user_states[uid] = UserState(step="wait_click_amount")
         await event.respond(
-            f"💳 **To'lov ma'lumotlari**\n\n"
-            f"🏦 Bank: **Humo**\n"
-            f"💳 Karta: `{card}`\n"
-            f"💰 Summa: **{pay_amount:,} so'm**\n"
-            f"⏰ Muddat: **3 daqiqa**\n\n"
-            f"⚡ Pul o'tkazganingizdan so'ng\n"
-            f"**avtomatik** tasdiqlanadi!\n\n"
-            f"❗ Faqat shu kartaga va aynan\n"
-            f"**{pay_amount:,} so'm** o'tkazing!",
+            f"💳 **CLICK orqali to'lov**\n\n"
+            f"💰 Hozirgi balans: **{bal:,} so'm**\n\n"
+            f"Qancha to'lamoqchisiz? (so'mda yozing)\n"
+            f"_Masalan: 10000_",
             buttons=[[Button.text("🔙 Bosh menyu")]]
         )
-        log.info(f"To'lov yaratildi: user={uid}, karta={card}, summa={pay_amount}, id={pay_id}")
+
+    @bot_client.on(events.NewMessage(
+        func=lambda e: not e.file and
+        user_states.get(e.sender_id, UserState()).step == "wait_click_amount"
+    ))
+    async def pay_click_amount(event):
+        uid = event.sender_id
+        text = event.text.strip()
+
+        if text == "🔙 Bosh menyu":
+            user_states[uid] = UserState()
+            await event.respond("🏠 Bosh menyu", buttons=main_menu(is_admin(uid), uid))
+            return
+
+        # Summani parse qilish
+        try:
+            amount = int(re.sub(r'[^\d]', '', text))
+        except Exception:
+            await event.respond("❌ Noto'g'ri format! Faqat raqam yozing:\n_Masalan: 10000_")
+            return
+
+        if amount < 1000:
+            await event.respond("❌ Minimal to'lov summasi: **1 000 so'm**")
+            return
+
+        if amount > 10_000_000:
+            await event.respond("❌ Maksimal to'lov summasi: **10 000 000 so'm**")
+            return
+
+        user_states[uid] = UserState()
+
+        # CLICK invoice yaratish
+        merchant_trans_id = db_create_click_invoice(uid, amount)
+        click_url = create_click_url(amount, merchant_trans_id)
+
+        await event.respond(
+            f"💳 **CLICK orqali to'lov**\n\n"
+            f"💰 Summa: **{amount:,} so'm**\n\n"
+            f"👇 Havolani bosing → CLICK ilovasi ochiladi → to'lang:\n\n"
+            f"{click_url}\n\n"
+            f"✅ To'lov o'tgach balans **avtomatik** yangilanadi",
+            buttons=[
+                [Button.url("💳 CLICK da to'lash", click_url)],
+                [Button.text("🔙 Bosh menyu")],
+            ]
+        )
+        log.info(f"CLICK invoice: user={uid}, amount={amount}, trans_id={merchant_trans_id}")
 
     # ============================================================
     #  @HUMOCARDBOT XABAR TINGLOVCHI
@@ -3410,6 +3742,103 @@ async def main():
             expired = db_expire_old()
             if expired:
                 log.info(f"⏰ {expired} ta to'lov muddati o'tdi, bekor qilindi")
+
+    # ============================================================
+    #  CLICK WEBHOOK SERVER (aiohttp)
+    # ============================================================
+    from aiohttp import web as aio_web
+
+    async def click_prepare(request):
+        try:
+            data = dict(await request.post())
+            log.info(f"CLICK Prepare: {data}")
+            merchant_trans_id = data.get("merchant_trans_id", "")
+            amount = float(data.get("amount", 0))
+            if not verify_click_signature(data, action=0):
+                return aio_web.json_response({"error": -1, "error_note": "SIGN CHECK FAILED"})
+            invoice = db_get_click_invoice(merchant_trans_id)
+            if not invoice:
+                return aio_web.json_response({"error": -5, "error_note": "Invoice topilmadi"})
+            inv_id, user_id, inv_amount, status = invoice
+            if status == "paid":
+                return aio_web.json_response({"error": -4, "error_note": "Allaqachon to'langan"})
+            if abs(amount - inv_amount) > 1:
+                return aio_web.json_response({"error": -2, "error_note": "Summa mos kelmaydi"})
+            return aio_web.json_response({
+                "click_trans_id": data.get("click_trans_id"),
+                "merchant_trans_id": merchant_trans_id,
+                "merchant_prepare_id": inv_id,
+                "error": 0, "error_note": "Success"
+            })
+        except Exception as e:
+            log.error(f"CLICK Prepare xato: {e}")
+            return aio_web.json_response({"error": -9, "error_note": str(e)})
+
+    async def click_complete(request):
+        try:
+            data = dict(await request.post())
+            log.info(f"CLICK Complete: {data}")
+            merchant_trans_id = data.get("merchant_trans_id", "")
+            error = int(data.get("error", 0))
+            if not verify_click_signature(data, action=1):
+                return aio_web.json_response({"error": -1, "error_note": "SIGN CHECK FAILED"})
+            if error < 0:
+                return aio_web.json_response({"error": 0, "error_note": "Success"})
+            result = db_confirm_click_invoice(merchant_trans_id)
+            if not result:
+                return aio_web.json_response({"error": -4, "error_note": "Invoice topilmadi"})
+            user_id, amount = result
+            db_add_balance(user_id, amount, f"CLICK: {merchant_trans_id}")
+            # Hamkor komissiyasi
+            partner_id = db_get_referred_by(user_id)
+            if partner_id:
+                commission = int(amount * PARTNER_PAY_PERCENT / 100)
+                if commission > 0:
+                    db_add_partner_balance(partner_id, commission, f"CLICK komissiya: {user_id}")
+            # Foydalanuvchiga xabar
+            bal = db_get_balance(user_id)
+            try:
+                await bot_client.send_message(
+                    user_id,
+                    f"✅ **To'lov qabul qilindi!**\n\n"
+                    f"💰 +{amount:,} so'm qo'shildi\n"
+                    f"💼 Balans: **{bal:,} so'm**\n\n"
+                    f"Xizmatdan foydalanishingiz mumkin! 👇",
+                    buttons=main_menu(is_admin(user_id), user_id)
+                )
+            except Exception as e:
+                log.error(f"Xabar xato: {e}")
+            await notify_admin(
+                f"💳 **CLICK to'lov**\n\n"
+                f"👤 `{user_id}`\n"
+                f"💰 **{amount:,} so'm**\n"
+                f"🔖 `{merchant_trans_id}`"
+            )
+            return aio_web.json_response({"error": 0, "error_note": "Success"})
+        except Exception as e:
+            log.error(f"CLICK Complete xato: {e}")
+            return aio_web.json_response({"error": -9, "error_note": str(e)})
+
+    async def serve_html(filename):
+        try:
+            with open(f"/data/static/{filename}", "r", encoding="utf-8") as f:
+                return aio_web.Response(text=f.read(), content_type="text/html")
+        except FileNotFoundError:
+            return aio_web.Response(text="<h1>Not Found</h1>", status=404, content_type="text/html")
+
+    app = aio_web.Application()
+    app.router.add_post("/click/prepare", click_prepare)
+    app.router.add_post("/click/complete", click_complete)
+    app.router.add_get("/", lambda r: aio_web.json_response({"status": "ok"}))
+    app.router.add_get("/health", lambda r: aio_web.json_response({"status": "ok"}))
+    app.router.add_get("/privacy", lambda r: serve_html("privacy.html"))
+    app.router.add_get("/terms",   lambda r: serve_html("terms.html"))
+    app.router.add_get("/oferta",  lambda r: serve_html("oferta.html"))
+
+    runner = aio_web.AppRunner(app)
+    await runner.setup()
+    await aio_web.TCPSite(runner, "0.0.0.0", SERVER_PORT).start()
+    log.info(f"✅ Webhook server: port {SERVER_PORT}")
 
     asyncio.create_task(expire_checker())
     asyncio.create_task(queue_worker())
