@@ -4514,11 +4514,10 @@ async def main():
             f"💳 **CLICK orqali to'lov**\n\n"
             f"💰 Summa: **{amount:,} so'm**\n\n"
             f"👇 Havolani bosing → CLICK ilovasi ochiladi → to'lang:\n\n"
-            f"{click_url}\n\n"
             f"✅ To'lov o'tgach balans **avtomatik** yangilanadi",
             buttons=[
                 [Button.url("💳 CLICK da to'lash", click_url)],
-                [Button.text("🔙 Bosh menyu")],
+                [Button.url("🔙 Bosh menyu", "https://t.me/quiz_import_bot")],
             ]
         )
         log.info(f"CLICK invoice: user={uid}, amount={amount}, trans_id={merchant_trans_id}")
@@ -5121,4 +5120,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-                     
