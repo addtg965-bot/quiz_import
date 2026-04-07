@@ -1,11 +1,11 @@
 """
-Click To'lov Tizimi Integratsiyasi
-===================================
-Click API orqali to'lovlarni qabul qilish uchun modul.
+Click To'lov Tizimi — To'g'rilangan Versiya
+=============================================
+main.py dagi click_invoices jadvali bilan ishlaydi.
 
-Click ikki xil usulda ishlaydi:
-  1. PREPARE  — foydalanuvchi to'lovni boshlaydi
-  2. COMPLETE — Click to'lovni tasdiqlaydi yoki bekor qiladi
+Click ikki bosqichda ishlaydi:
+  1. PREPARE  — to'lovni boshlashdan oldin buyurtmani tekshirish
+  2. COMPLETE — to'lov o'tgandan keyin tasdiqlash
 
 Rasmiy hujjat: https://docs.click.uz/click-api-en/
 """
@@ -15,20 +15,18 @@ import hmac
 import logging
 import os
 import sqlite3
-from dataclasses import dataclass
 from typing import Optional
 
 log = logging.getLogger(__name__)
 
 # ============================================================
-#  CLICK SOZLAMALARI  (env dan o'qiladi)
+#  SOZLAMALAR — env dan o'qiladi
 # ============================================================
-CLICK_SERVICE_ID  = int(os.environ.get("CLICK_SERVICE_ID", "0"))
-CLICK_MERCHANT_ID = int(os.environ.get("CLICK_MERCHANT_ID", "0"))
-CLICK_SECRET_KEY  = os.environ.get("CLICK_SECRET_KEY", "")
-CLICK_MERCHANT_USER_ID = int(os.environ.get("CLICK_MERCHANT_USER_ID", "0"))
+CLICK_SERVICE_ID        = os.environ.get("CLICK_SERVICE_ID", "")
+CLICK_MERCHANT_ID       = os.environ.get("CLICK_MERCHANT_ID", "")
+CLICK_SECRET_KEY        = os.environ.get("CLICK_SECRET_KEY", "")
+CLICK_MERCHANT_USER_ID  = os.environ.get("CLICK_MERCHANT_USER_ID", "")
 
-# To'lov havolasi qolipи
 CLICK_PAY_URL = "https://my.click.uz/services/pay"
 
 
@@ -36,143 +34,190 @@ CLICK_PAY_URL = "https://my.click.uz/services/pay"
 #  TO'LOV HAVOLASI YARATISH
 # ============================================================
 
-def build_click_url(amount: int, order_id: int, return_url: str = "") -> str:
+def build_click_url(amount: int, merchant_trans_id: str,
+                    return_url: str = "https://t.me/quiz_import_bot") -> str:
     """
     Foydalanuvchi Click orqali to'lashi uchun havola yaratadi.
 
     Parametrlar:
-        amount   — so'mda summa (masalan: 2000)
-        order_id — bazadagi to'lov ID si (merchant_trans_id sifatida yuboriladi)
-        return_url — to'lovdan keyin qaytariladigan URL (ixtiyoriy)
+        amount            — so'mda summa (masalan: 10000)
+        merchant_trans_id — click_invoices.merchant_trans_id (UUID ko'rinishida)
+        return_url        — to'lovdan keyin qaytariladigan URL
 
-    Qaytaradi:
-        https://my.click.uz/services/pay?... ko'rinishidagi URL
+    Qaytaradi: https://my.click.uz/services/pay?... ko'rinishidagi URL
     """
-    params = {
-        "service_id": CLICK_SERVICE_ID,
-        "merchant_id": CLICK_MERCHANT_ID,
-        "amount":      amount,
-        "transaction_param": order_id,
-    }
-    if return_url:
-        params["return_url"] = return_url
-
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    query = (
+        f"service_id={CLICK_SERVICE_ID}"
+        f"&merchant_id={CLICK_MERCHANT_ID}"
+        f"&amount={amount}"
+        f"&transaction_param={merchant_trans_id}"
+        f"&return_url={return_url}"
+    )
     return f"{CLICK_PAY_URL}?{query}"
 
 
 # ============================================================
-#  CLICK WEBHOOK SO'ROVLARini TEKSHIRISH
+#  IMZO TEKSHIRISH  (MUHIM: sign_time kerak!)
 # ============================================================
 
-@dataclass
-class ClickRequest:
-    """Click dan kelgan PREPARE yoki COMPLETE so'rov ma'lumotlari"""
-    click_trans_id:        int
-    service_id:            int
-    click_paydoc_id:       int
-    merchant_trans_id:     str      # bizning order_id
-    amount:                float
-    action:                int      # 0=PREPARE, 1=COMPLETE
-    error:                 int
-    error_note:            str
-    sign_time:             str
-    sign_string:           str
-    merchant_prepare_id:   Optional[int] = None
-
-
-def verify_sign(req: ClickRequest) -> bool:
+def verify_click_sign(data: dict, action: int) -> bool:
     """
-    Click imzosini tekshiradi.
-    Hujjat: https://docs.click.uz/click-api-en/#sign_string
-    """
-    if req.action == 0:
-        # PREPARE imzosi
-        raw = (
-            f"{req.click_trans_id}"
-            f"{req.service_id}"
-            f"{CLICK_SECRET_KEY}"
-            f"{req.merchant_trans_id}"
-            f"{req.amount}"
-            f"{req.action}"
-            f"{req.sign_time}"
-        )
-    else:
-        # COMPLETE imzosi
-        raw = (
-            f"{req.click_trans_id}"
-            f"{req.service_id}"
-            f"{CLICK_SECRET_KEY}"
-            f"{req.merchant_trans_id}"
-            f"{req.merchant_prepare_id}"
-            f"{req.amount}"
-            f"{req.action}"
-            f"{req.sign_time}"
-        )
+    Click yuborgan so'rovning MD5 imzosini tekshiradi.
 
-    expected = hashlib.md5(raw.encode("utf-8")).hexdigest()
-    return hmac.compare_digest(expected, req.sign_string)
+    PREPARE (action=0) uchun:
+        MD5(click_trans_id + service_id + secret_key + merchant_trans_id
+            + amount + action + sign_time)
+
+    COMPLETE (action=1) uchun:
+        MD5(click_trans_id + service_id + secret_key + merchant_trans_id
+            + merchant_prepare_id + amount + action + sign_time)
+
+    Eslatma: 'amount' float ko'rinishida bo'ladi, masalan "2000.0"
+    """
+    try:
+        click_trans_id    = str(data.get("click_trans_id", ""))
+        service_id        = str(CLICK_SERVICE_ID)
+        merchant_trans_id = str(data.get("merchant_trans_id", ""))
+        amount            = str(data.get("amount", ""))
+        action_str        = str(data.get("action", action))
+        sign_time         = str(data.get("sign_time", ""))
+        received_sign     = str(data.get("sign_string", ""))
+
+        if action == 0:
+            # PREPARE
+            raw = (
+                click_trans_id +
+                service_id +
+                CLICK_SECRET_KEY +
+                merchant_trans_id +
+                amount +
+                action_str +
+                sign_time
+            )
+        else:
+            # COMPLETE — merchant_prepare_id qo'shiladi
+            merchant_prepare_id = str(data.get("merchant_prepare_id", ""))
+            raw = (
+                click_trans_id +
+                service_id +
+                CLICK_SECRET_KEY +
+                merchant_trans_id +
+                merchant_prepare_id +
+                amount +
+                action_str +
+                sign_time
+            )
+
+        expected = hashlib.md5(raw.encode("utf-8")).hexdigest()
+        ok = hmac.compare_digest(expected, received_sign)
+        if not ok:
+            log.warning(
+                "Click imzo XATO | expected=%s | received=%s | raw=%s",
+                expected, received_sign, raw
+            )
+        return ok
+
+    except Exception as e:
+        log.error("verify_click_sign xato: %s", e)
+        return False
 
 
 # ============================================================
 #  XATO KODLARI
 # ============================================================
-CLICK_OK                   =  0
-CLICK_ERR_SIGN             = -1
-CLICK_ERR_INCORRECT_PARAM  = -2   # Noto'g'ri parametr
-CLICK_ERR_ORDER_NOT_FOUND  = -5   # Buyurtma topilmadi
-CLICK_ERR_ALREADY_PAID     = -4   # Allaqachon to'langan
-CLICK_ERR_CANCELLED        = -9   # Foydalanuvchi bekor qildi
+CLICK_OK                  =  0
+CLICK_ERR_SIGN            = -1
+CLICK_ERR_INCORRECT_PARAM = -2
+CLICK_ERR_ORDER_NOT_FOUND = -5
+CLICK_ERR_ALREADY_PAID    = -4
+CLICK_ERR_CANCELLED       = -9
+
+
+# ============================================================
+#  DB YORDAMCHI FUNKSIYALAR  (click_invoices jadvali)
+# ============================================================
+
+def _get_invoice(db_file: str, merchant_trans_id: str) -> Optional[tuple]:
+    """
+    click_invoices dan invoice olish.
+    Qaytaradi: (id, user_id, amount, status) yoki None
+    """
+    con = sqlite3.connect(db_file)
+    row = con.execute(
+        """SELECT id, user_id, amount, status
+           FROM click_invoices
+           WHERE merchant_trans_id = ?""",
+        (merchant_trans_id,),
+    ).fetchone()
+    con.close()
+    return row
+
+
+def _confirm_invoice(db_file: str, merchant_trans_id: str,
+                     click_trans_id: str) -> Optional[tuple]:
+    """
+    Invoice ni 'paid' deb belgilash.
+    Qaytaradi: (user_id, amount) yoki None
+    """
+    con = sqlite3.connect(db_file)
+    row = con.execute(
+        """SELECT user_id, amount FROM click_invoices
+           WHERE merchant_trans_id = ? AND status = 'pending'""",
+        (merchant_trans_id,),
+    ).fetchone()
+    if row:
+        con.execute(
+            """UPDATE click_invoices
+               SET status='paid',
+                   paid_at=datetime('now')
+               WHERE merchant_trans_id = ?""",
+            (merchant_trans_id,),
+        )
+        con.commit()
+    con.close()
+    return row
 
 
 # ============================================================
 #  PREPARE HANDLER
 # ============================================================
 
-def handle_prepare(req: ClickRequest, db_file: str) -> dict:
+def handle_prepare(data: dict, db_file: str) -> dict:
     """
     Click PREPARE so'rovini qayta ishlaydi.
-    To'lov mavjud va amal qilish muddati o'tmagan bo'lsa ruxsat beradi.
+    Botning aiohttp handler ichida chaqiriladi.
     """
-    if not verify_sign(req):
-        log.warning("Click PREPARE: imzo noto'g'ri, trans_id=%s", req.click_trans_id)
-        return {
-            "error": CLICK_ERR_SIGN,
-            "error_note": "SIGN CHECK FAILED",
-        }
+    action = int(data.get("action", 0))
 
-    con = sqlite3.connect(db_file)
-    row = con.execute(
-        """SELECT id, user_id, amount, status
-           FROM payments
-           WHERE id=? AND status='pending'
-              AND expires_at > datetime('now')""",
-        (int(req.merchant_trans_id),),
-    ).fetchone()
-    con.close()
+    if not verify_click_sign(data, action=0):
+        return {"error": CLICK_ERR_SIGN, "error_note": "SIGN CHECK FAILED"}
 
-    if not row:
-        return {
-            "error": CLICK_ERR_ORDER_NOT_FOUND,
-            "error_note": "Order not found or expired",
-        }
+    merchant_trans_id = data.get("merchant_trans_id", "")
+    amount = float(data.get("amount", 0))
 
-    pay_id, user_id, expected_amount, status = row
+    invoice = _get_invoice(db_file, merchant_trans_id)
+    if not invoice:
+        return {"error": CLICK_ERR_ORDER_NOT_FOUND,
+                "error_note": "Invoice topilmadi"}
 
-    # Summani tekshirish (so'm)
-    if abs(float(req.amount) - float(expected_amount)) > 0.01:
-        return {
-            "error": CLICK_ERR_INCORRECT_PARAM,
-            "error_note": f"Amount mismatch: expected {expected_amount}",
-        }
+    inv_id, user_id, inv_amount, status = invoice
 
-    log.info("Click PREPARE OK: order=%s, user=%s, amount=%s", pay_id, user_id, req.amount)
+    if status == "paid":
+        return {"error": CLICK_ERR_ALREADY_PAID,
+                "error_note": "Allaqachon to'langan"}
+
+    if abs(amount - float(inv_amount)) > 1:
+        return {"error": CLICK_ERR_INCORRECT_PARAM,
+                "error_note": f"Summa mos kelmaydi. Kerak: {inv_amount}"}
+
+    log.info("Click PREPARE OK: trans=%s, user=%s, amount=%s",
+             merchant_trans_id, user_id, amount)
     return {
-        "click_trans_id":   req.click_trans_id,
-        "merchant_trans_id": str(pay_id),
-        "merchant_prepare_id": pay_id,
-        "error":            CLICK_OK,
-        "error_note":       "Success",
+        "click_trans_id":     data.get("click_trans_id"),
+        "merchant_trans_id":  merchant_trans_id,
+        "merchant_prepare_id": inv_id,
+        "error":              CLICK_OK,
+        "error_note":         "Success",
     }
 
 
@@ -180,74 +225,57 @@ def handle_prepare(req: ClickRequest, db_file: str) -> dict:
 #  COMPLETE HANDLER
 # ============================================================
 
-def handle_complete(req: ClickRequest, db_file: str) -> dict:
+def handle_complete(data: dict, db_file: str) -> dict:
     """
     Click COMPLETE so'rovini qayta ishlaydi.
-    To'lov muvaffaqiyatli bo'lsa tasdiqlaydi, bekor bo'lsa — o'chiradi.
+    Muvaffaqiyatli bo'lsa user balansini yangilash uchun
+    (_user_id, _amount) ni ham qaytaradi — bot ular bilan ishlaydi.
     """
-    if not verify_sign(req):
-        log.warning("Click COMPLETE: imzo noto'g'ri, trans_id=%s", req.click_trans_id)
+    action = int(data.get("action", 1))
+    error  = int(data.get("error", 0))
+
+    if not verify_click_sign(data, action=1):
+        return {"error": CLICK_ERR_SIGN, "error_note": "SIGN CHECK FAILED"}
+
+    merchant_trans_id = data.get("merchant_trans_id", "")
+    click_trans_id    = str(data.get("click_trans_id", ""))
+
+    # Foydalanuvchi bekor qilgan yoki xato
+    if error < 0:
+        log.info("Click COMPLETE: foydalanuvchi bekor qildi, trans=%s",
+                 merchant_trans_id)
         return {
-            "error": CLICK_ERR_SIGN,
-            "error_note": "SIGN CHECK FAILED",
+            "click_trans_id":    click_trans_id,
+            "merchant_trans_id": merchant_trans_id,
+            "merchant_confirm_id": 0,
+            "error":             CLICK_OK,
+            "error_note":        "Cancelled by user",
         }
 
-    con = sqlite3.connect(db_file)
-    row = con.execute(
-        "SELECT id, user_id, amount, status FROM payments WHERE id=?",
-        (int(req.merchant_trans_id),),
-    ).fetchone()
+    # Invoice ni tasdiqlash
+    result = _confirm_invoice(db_file, merchant_trans_id, click_trans_id)
+    if not result:
+        # Allaqachon to'langan yoki topilmadi
+        invoice = _get_invoice(db_file, merchant_trans_id)
+        if invoice and invoice[3] == "paid":
+            return {"error": CLICK_ERR_ALREADY_PAID,
+                    "error_note": "Already paid"}
+        return {"error": CLICK_ERR_ORDER_NOT_FOUND,
+                "error_note": "Invoice topilmadi"}
 
-    if not row:
-        con.close()
-        return {
-            "error": CLICK_ERR_ORDER_NOT_FOUND,
-            "error_note": "Order not found",
-        }
+    user_id, amount = result
+    inv_id = _get_invoice(db_file, merchant_trans_id)
+    prepare_id = inv_id[0] if inv_id else 0
 
-    pay_id, user_id, expected_amount, status = row
-
-    if status == "confirmed":
-        con.close()
-        return {
-            "error": CLICK_ERR_ALREADY_PAID,
-            "error_note": "Already paid",
-        }
-
-    # Foydalanuvchi bekor qilgan yoki xato bo'lgan
-    if req.error < 0:
-        con.execute("UPDATE payments SET status='cancelled' WHERE id=?", (pay_id,))
-        con.commit()
-        con.close()
-        log.info("Click COMPLETE: bekor qilindi, order=%s, error=%s", pay_id, req.error)
-        return {
-            "click_trans_id":   req.click_trans_id,
-            "merchant_trans_id": str(pay_id),
-            "merchant_confirm_id": pay_id,
-            "error":            CLICK_OK,
-            "error_note":       "Cancelled",
-        }
-
-    # To'lovni tasdiqlash
-    con.execute(
-        """UPDATE payments
-           SET status='confirmed',
-               confirmed_at=datetime('now'),
-               click_trans_id=?
-           WHERE id=?""",
-        (req.click_trans_id, pay_id),
-    )
-    con.commit()
-    con.close()
-
-    log.info("Click COMPLETE OK: order=%s, user=%s, amount=%s", pay_id, user_id, req.amount)
+    log.info("Click COMPLETE OK: trans=%s, user=%s, amount=%s",
+             merchant_trans_id, user_id, amount)
     return {
-        "click_trans_id":    req.click_trans_id,
-        "merchant_trans_id": str(pay_id),
-        "merchant_confirm_id": pay_id,
+        "click_trans_id":    click_trans_id,
+        "merchant_trans_id": merchant_trans_id,
+        "merchant_confirm_id": prepare_id,
         "error":             CLICK_OK,
         "error_note":        "Success",
-        # Bot uchun qo'shimcha ma'lumot (JSON javobiga kirmaydi)
+        # Bot uchun — JSON javobga kirmaydi
         "_user_id": user_id,
-        "_amount":  int(req.amount),
+        "_amount":  int(amount),
     }
