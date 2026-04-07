@@ -1786,18 +1786,41 @@ def create_click_url(amount: int, merchant_trans_id: str) -> str:
     )
 
 def verify_click_signature(data: dict, action: int) -> bool:
+    """
+    Click imzosini tekshiradi.
+    MUHIM: sign_time ham kiritilishi shart — rasmiy hujjatga ko\'ra.
+    PREPARE (action=0): click_trans_id + service_id + secret + merchant_trans_id + amount + action + sign_time
+    COMPLETE (action=1): + merchant_prepare_id qo\'shiladi
+    """
+    import hashlib as _hl, hmac as _hmac
     try:
-        sign_string = "{}{}{}{}{}{}{}".format(
-            data.get("click_trans_id", ""),
-            CLICK_SERVICE_ID,
-            CLICK_SECRET_KEY,
-            data.get("merchant_trans_id", ""),
-            data.get("merchant_prepare_id", "") if action == 1 else "",
-            data.get("amount", ""),
-            data.get("action", ""),
-        )
-        expected = __import__('hashlib').md5(sign_string.encode("utf-8")).hexdigest()
-        return expected == data.get("sign_string", "")
+        if action == 0:
+            raw = "{}{}{}{}{}{}{}".format(
+                data.get("click_trans_id", ""),
+                CLICK_SERVICE_ID,
+                CLICK_SECRET_KEY,
+                data.get("merchant_trans_id", ""),
+                data.get("amount", ""),
+                data.get("action", ""),
+                data.get("sign_time", ""),
+            )
+        else:
+            raw = "{}{}{}{}{}{}{}{}".format(
+                data.get("click_trans_id", ""),
+                CLICK_SERVICE_ID,
+                CLICK_SECRET_KEY,
+                data.get("merchant_trans_id", ""),
+                data.get("merchant_prepare_id", ""),
+                data.get("amount", ""),
+                data.get("action", ""),
+                data.get("sign_time", ""),
+            )
+        expected = _hl.md5(raw.encode("utf-8")).hexdigest()
+        received = data.get("sign_string", "")
+        ok = _hmac.compare_digest(expected, received)
+        if not ok:
+            log.warning(f"Click imzo XATO | expected={expected} | received={received}")
+        return ok
     except Exception as e:
         log.error(f"Signature xato: {e}")
         return False
