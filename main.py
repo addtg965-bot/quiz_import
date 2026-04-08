@@ -1786,12 +1786,7 @@ def create_click_url(amount: int, merchant_trans_id: str) -> str:
     )
 
 def verify_click_signature(data: dict, action: int) -> bool:
-    """
-    Click imzosini tekshiradi.
-    MUHIM: sign_time ham kiritilishi shart — rasmiy hujjatga ko\'ra.
-    PREPARE (action=0): click_trans_id + service_id + secret + merchant_trans_id + amount + action + sign_time
-    COMPLETE (action=1): + merchant_prepare_id qo\'shiladi
-    """
+    """Click MD5 imzosini tekshiradi (sign_time bilan)."""
     import hashlib as _hl, hmac as _hmac
     try:
         if action == 0:
@@ -1819,7 +1814,7 @@ def verify_click_signature(data: dict, action: int) -> bool:
         received = data.get("sign_string", "")
         ok = _hmac.compare_digest(expected, received)
         if not ok:
-            log.warning(f"Click imzo XATO | expected={expected} | received={received}")
+            log.warning(f"Click imzo XATO | exp={expected} | got={received}")
         return ok
     except Exception as e:
         log.error(f"Signature xato: {e}")
@@ -2988,40 +2983,45 @@ async def main():
 
                 # Savollarni RAM da saqlaymiz
                 state = UserState(
-                    step="wait_payment_file" if bal < price else "ask_fan_name",
+                    step="file_preview",
                     questions=qs,
                     total_questions=q_count
                 )
                 user_states[uid] = state
-                log.info(f"State saqlandi: step={state.step}, {q_count} savol, user={uid}")
+                log.info(f"State saqlandi: step=file_preview, {q_count} savol, user={uid}")
 
-                if bal < price:
-                    await msg.edit(
-                        f"📂 **{q_count} ta savol topildi!**\n\n"
-                        f"💰 Narx: {blocks} × 2 000 = **{price:,} so'm**\n"
-                        f"💼 Balansda: {bal:,} so'm\n"
-                        f"❌ Yetishmaydi: **{price - bal:,} so'm**\n\n"
-                        f"📌 Savollar saqlanib qoldi"
-                    )
-                    needed = price - bal
-                    await event.respond(
-                        "To'lov qiling:",
-                        buttons=[
-                            [Button.text(f"💳 {needed:,} so'm to'lash")],
-                            [Button.text("🔙 Bosh menyu")],
-                        ]
-                    )
-                else:
-                    db_deduct_balance(uid, price, f"Fayl quiz: {q_count} ta savol")
-                    bal_left = db_get_balance(uid)
-                    await msg.edit(
-                        f"📂 **{q_count} ta savol topildi!**\n"
-                        f"💰 -{price:,} so'm | Qoldi: **{bal_left:,} so'm**"
-                    )
-                    await event.respond(
-                        "Fan nomini yozing:",
-                        buttons=[[Button.text("🔙 Bosh menyu")]]
-                    )
+                # ── 5 ta random savol QuizBot ga yuborib preview ko'rsatish ──
+                await msg.edit(
+                    f"📂 **{q_count} ta savol topildi!**\n\n"
+                    f"⏳ Namuna sifatida 5 ta savol quiz qilinmoqda..."
+                )
+
+                preview_count = min(5, q_count)
+                preview_qs = random.sample(qs, preview_count)
+
+                # Preview quizni yuboramiz (bepul, haqiqiy akkaunt bilan)
+                try:
+                    if account_pool:
+                        userbot = await get_free()
+                        preview_req = QuizRequest(
+                            user_id=uid, chat_id=event.chat_id,
+                            questions=preview_qs,
+                            fan_name="📋 Namuna ko'rish",
+                            variant_num=0,
+                            time_choice="30",
+                            order_choice="order",
+                            total_variants=1,
+                            source="preview",
+                        )
+                        # Preview ni fon task sifatida yuboramiz
+                        asyncio.create_task(_send_preview(userbot, preview_req, uid, event.chat_id,
+                                                          q_count, price, bal, blocks))
+                    else:
+                        # Akkaunt yo'q — to'g'ridan narx ko'rsatamiz
+                        await _show_file_price(event.chat_id, uid, q_count, price, bal, blocks)
+                except Exception as pe:
+                    log.error(f"Preview xato: {pe}")
+                    await _show_file_price(event.chat_id, uid, q_count, price, bal, blocks)
 
             else:
                 # Shablon topilmadi — manual (bepul)
@@ -3521,17 +3521,19 @@ async def main():
                 # Balans tekshirish
                 bal = db_get_balance(uid)
                 if bal < AI_PRICE:
-                    # Stateni saqlab qo'yamiz — to'lovdan keyin qaytamiz
                     state.step = "wait_payment"
                     user_states[uid] = state
+                    needed = AI_PRICE - bal
+                    merchant_trans_id = db_create_click_invoice(uid, needed)
+                    click_url = create_click_url(needed, merchant_trans_id)
                     await event.respond(
                         f"❌ **Balans yetarli emas!**\n\n"
-                        f"💰 Balans: {bal:,} so'm\n"
-                        f"💳 Kerak: {AI_PRICE:,} so'm\n\n"
-                        f"📌 Sozlamalaringiz saqlanib qoldi!\n"
-                        f"To'lov qilib, qaytib keling — boshidan kiritmasiz:",
+                        f"💰 Balansda: {bal:,} so'm\n"
+                        f"💳 Kerak: {AI_PRICE:,} so'm\n"
+                        f"➖ Yetishmaydi: **{needed:,} so'm**\n\n"
+                        f"📌 Sozlamalaringiz saqlanib qoldi — to'lovdan keyin avtomatik davom etadi!",
                         buttons=[
-                            [Button.text(f"💳 {AI_PRICE:,} so'm to'lash")],
+                            [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", click_url)],
                             [Button.text("🔙 Bosh menyu")],
                         ]
                     )
@@ -3602,6 +3604,79 @@ async def main():
                     f"⚠️ Shablon aniqlanmadi. {len(lines)} ta qator.\nJavoblarni siz ko'rsatasiz:",
                     buttons=[[Button.text("▶️ Davom etish")], [Button.text("🔙 Bosh menyu")]]
                 ); return
+
+        # ---- FILE CONFIRMED — namuna ko'rib bo'lgach ----
+        if state.step == "file_confirmed":
+            if text in ("✅ Maqul, davom etamiz", "✅ Maqul, davom etamiz"):
+                q_count = state.total_questions
+                price   = state.__dict__.get("_price", calc_file_price(q_count))
+                blocks  = (q_count + 24) // 25
+                bal_now = db_get_balance(uid)
+                if bal_now >= price:
+                    db_deduct_balance(uid, price, f"Fayl quiz: {q_count} ta savol")
+                    bal_left = db_get_balance(uid)
+                    state.step = "ask_fan_name"
+                    user_states[uid] = state
+                    await event.respond(
+                        f"✅ **To'lov bajarildi!**\n"
+                        f"💰 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
+                        f"Fan nomini yozing:",
+                        buttons=[[Button.text("🔙 Bosh menyu")]]
+                    )
+                else:
+                    needed = price - bal_now
+                    mtid = db_create_click_invoice(uid, needed)
+                    curl = create_click_url(needed, mtid)
+                    state.step = "wait_payment_file"
+                    user_states[uid] = state
+                    await event.respond(
+                        f"📂 **{q_count} ta savol**\n\n"
+                        f"💰 Narx: {blocks} × 1 500 = **{price:,} so'm**\n"
+                        f"💼 Balansda: {bal_now:,} so'm\n"
+                        f"➖ Yetishmaydi: **{needed:,} so'm**\n\n"
+                        f"📌 Savollar saqlanib qoldi!",
+                        buttons=[
+                            [Button.url(f"💳 CLICK {needed:,} so'm to'lash", curl)],
+                            [Button.text("🔙 Bosh menyu")],
+                        ]
+                    )
+                return
+
+            if text in ("❌ Bekor qilish", "❌ Bekor qilish"):
+                user_states[uid] = UserState()
+                # Admin username/linkni olish
+                bot_me_info = await bot_client.get_me()
+                admin_links = []
+                for aid in ADMIN_IDS:
+                    try:
+                        admin_entity = await bot_client.get_entity(aid)
+                        uname = getattr(admin_entity, "username", None)
+                        if uname:
+                            admin_links.append(f"@{uname}")
+                        else:
+                            admin_links.append(f"Admin (ID: {aid})")
+                    except Exception:
+                        admin_links.append(f"Admin (ID: {aid})")
+                admin_str = " yoki ".join(admin_links) if admin_links else "Admin"
+                await event.respond(
+                    f"😕 **Namuna maqul kelmadi?**\n\n"
+                    f"Muammo bo'lsa {admin_str} ga murojaat qiling — yordam beramiz!\n\n"
+                    f"Yoki fayl formatini tekshirib qaytadan yuboring.",
+                    buttons=main_menu(is_admin(uid), uid)
+                )
+                # Adminga xabar
+                sender = await event.get_sender()
+                fn = getattr(sender, "first_name", "") or ""
+                un = getattr(sender, "username", "") or ""
+                full = f"{fn}".strip() or un or str(uid)
+                ustr = f"@{un}" if un else f"ID: {uid}"
+                await notify_admin(
+                    f"⚠️ **Namuna maqul kelmadi**\n\n"
+                    f"👤 {full} ({ustr})\n"
+                    f"🆔 `{uid}`\n\n"
+                    f"Foydalanuvchi fayl namunasini rad etdi."
+                )
+                return
 
         # ---- MANUAL REJIM ----
         if state.step == "manual_start" and text == "▶️ Davom etish":
@@ -4457,39 +4532,6 @@ async def main():
     async def cmd_pay(event):
         uid = event.sender_id
         bal = db_get_balance(uid)
-        await event.respond(
-            f"💳 **To'lov**\n\n"
-            f"💰 Hozirgi balans: **{bal:,} so'm**\n\n"
-            f"To'lov usulini tanlang:",
-            buttons=[
-                [Button.text("💳 CLICK orqali to'lash")],
-                [Button.text("💰 Balansni ko'rish")],
-                [Button.text("🔙 Bosh menyu")],
-            ]
-        )
-
-    @bot_client.on(events.NewMessage(func=lambda e: not e.file
-                                     and e.text.strip() == "💰 Balansni ko'rish"))
-    async def cmd_balance(event):
-        uid = event.sender_id
-        bal = db_get_balance(uid)
-        tests = bal // AI_PRICE
-        await event.respond(
-            f"💰 **Balans: {bal:,} so'm**\n"
-            f"🤖 Yozib olish mumkin: **{tests} ta** AI test\n\n"
-            f"{'✅ Test tuzish mumkin!' if bal >= AI_PRICE else '❌ Balans yetarli emas. To\'lash kerak.'}",
-            buttons=[
-                [Button.text(f"💳 {AI_PRICE:,} so'm to'lash")],
-                [Button.text("🔙 Bosh menyu")],
-            ]
-        )
-
-    @bot_client.on(events.NewMessage(
-        func=lambda e: not e.file and e.text.strip() == "💳 CLICK orqali to'lash"
-    ))
-    async def pay_click_start(event):
-        uid = event.sender_id
-        bal = db_get_balance(uid)
         user_states[uid] = UserState(step="wait_click_amount")
         await event.respond(
             f"💳 **CLICK orqali to'lov**\n\n"
@@ -4498,6 +4540,40 @@ async def main():
             f"_Masalan: 10000_",
             buttons=[[Button.text("🔙 Bosh menyu")]]
         )
+
+    @bot_client.on(events.NewMessage(func=lambda e: not e.file
+                                     and e.text.strip() == "💰 Balansni ko'rish"))
+    async def cmd_balance(event):
+        uid = event.sender_id
+        bal = db_get_balance(uid)
+        tests = bal // AI_PRICE
+        if bal < AI_PRICE:
+            needed = AI_PRICE - bal
+            merchant_trans_id = db_create_click_invoice(uid, needed)
+            click_url = create_click_url(needed, merchant_trans_id)
+            await event.respond(
+                f"💰 **Balans: {bal:,} so'm**\n"
+                f"🤖 AI test uchun kerak: {AI_PRICE:,} so'm\n"
+                f"❌ Yetishmaydi: **{needed:,} so'm**",
+                buttons=[
+                    [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", click_url)],
+                    [Button.text("💳 Boshqa summa to'lash")],
+                    [Button.text("🔙 Bosh menyu")],
+                ]
+            )
+        else:
+            await event.respond(
+                f"💰 **Balans: {bal:,} so'm**\n"
+                f"🤖 Tuzish mumkin: **{tests} ta** AI test\n\n"
+                f"✅ Balans yetarli!",
+                buttons=[
+                    [Button.text("🤖 AI test tuzish")],
+                    [Button.text("💳 To'lov qilish")],
+                    [Button.text("🔙 Bosh menyu")],
+                ]
+            )
+
+    # pay_click_start olib tashlandi — cmd_pay o'zi bajaradi
 
     @bot_client.on(events.NewMessage(
         func=lambda e: not e.file and
@@ -4536,11 +4612,10 @@ async def main():
         await event.respond(
             f"💳 **CLICK orqali to'lov**\n\n"
             f"💰 Summa: **{amount:,} so'm**\n\n"
-            f"👇 Havolani bosing → CLICK ilovasi ochiladi → to'lang:\n\n"
+            f"👇 Tugmani bosing → CLICK ilovasi ochiladi → to'lang\n"
             f"✅ To'lov o'tgach balans **avtomatik** yangilanadi",
             buttons=[
-                [Button.url("💳 CLICK da to'lash", click_url)],
-                [Button.url("🔙 Bosh menyu", "https://t.me/quiz_import_bot")],
+                [Button.url(f"💳 CLICK da {amount:,} so'm to'lash", click_url)],
             ]
         )
         log.info(f"CLICK invoice: user={uid}, amount={amount}, trans_id={merchant_trans_id}")
@@ -5035,6 +5110,82 @@ async def main():
                 return card
         return None
 
+
+    # ============================================================
+    #  FAYL PREVIEW — 5 ta random savol yuborish
+    # ============================================================
+    async def _show_file_price(chat_id: int, uid: int, q_count: int,
+                               price: int, bal: int, blocks: int):
+        state = user_states.get(uid)
+        if state:
+            state.step = "wait_payment_file"
+            user_states[uid] = state
+        if bal >= price:
+            db_deduct_balance(uid, price, f"Fayl quiz: {q_count} ta savol")
+            bal_left = db_get_balance(uid)
+            if state:
+                state.step = "ask_fan_name"
+                user_states[uid] = state
+            await bot_client.send_message(
+                chat_id,
+                f"\u2705 **Namuna yuborildi!**\n\n"
+                f"\U0001F4C2 {q_count} ta savol topildi\n"
+                f"\U0001F4B0 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
+                f"Fan nomini yozing:",
+                buttons=[[Button.text("\U0001F519 Bosh menyu")]]
+            )
+        else:
+            needed = price - bal
+            mtid = db_create_click_invoice(uid, needed)
+            curl = create_click_url(needed, mtid)
+            await bot_client.send_message(
+                chat_id,
+                f"\U0001F4C2 **{q_count} ta savol topildi!**\n\n"
+                f"\U0001F4B0 Xizmat narxi: {blocks} \xd7 1 500 = **{price:,} so'm**\n"
+                f"\U0001F4BC Balansda: {bal:,} so'm\n"
+                f"\u2796 Yetishmaydi: **{needed:,} so'm**\n\n"
+                f"\U0001F4CC Savollar saqlanib qoldi \u2014 to'lovdan keyin davom etadi!",
+                buttons=[
+                    [Button.url(f"\U0001F4B3 CLICK orqali {needed:,} so'm to'lash", curl)],
+                    [Button.text("\U0001F519 Bosh menyu")],
+                ]
+            )
+
+    async def _send_preview(userbot, req: QuizRequest, uid: int, chat_id: int,
+                            q_count: int, price: int, bal: int, blocks: int):
+        try:
+            await bot_client.send_message(
+                chat_id,
+                f"\U0001F50D **Namuna (5 ta random savol)**\n"
+                f"Savollaringiz to'g'ri o'qildimi? Ko'rib chiqing \U0001F447"
+            )
+            url = await make_quiz(userbot, req)
+            if url:
+                await bot_client.send_message(
+                    chat_id,
+                    f"\u2705 **Namuna tayyor!**\n\n"
+                    f"\u25b6\ufe0f Quizni sinab ko'ring: {url}\n\n"
+                    f"Maqul bo'lsa \u2014 to'lov qilib, butun to'plamni oling \U0001F447",
+                    buttons=[
+                        [Button.text("\u2705 Maqul, davom etamiz")],
+                        [Button.text("\u274c Bekor qilish")],
+                    ]
+                )
+                state = user_states.get(uid)
+                if state:
+                    state.step = "file_confirmed"
+                    state.__dict__["_price"]  = price
+                    state.__dict__["_bal"]    = bal
+                    state.__dict__["_blocks"] = blocks
+                    user_states[uid] = state
+            else:
+                await _show_file_price(chat_id, uid, q_count, price, bal, blocks)
+        except Exception as e:
+            log.error(f"_send_preview xato: {e}")
+            await _show_file_price(chat_id, uid, q_count, price, bal, blocks)
+        finally:
+            release(userbot)
+
     # ============================================================
     #  MUDDATI O'TGAN TO'LOVLARNI BEKOR QILISH (fon task)
     # ============================================================
@@ -5097,19 +5248,88 @@ async def main():
                 commission = int(amount * PARTNER_PAY_PERCENT / 100)
                 if commission > 0:
                     db_add_partner_balance(partner_id, commission, f"CLICK komissiya: {user_id}")
-            # Foydalanuvchiga xabar
+            # Foydalanuvchiga xabar — pending state bo'lsa avtomatik davom et
             bal = db_get_balance(user_id)
+            prev_state = user_states.get(user_id)
+            has_pending_ai   = prev_state and prev_state.step == "wait_payment" and prev_state.fan_name
+            has_pending_file = prev_state and prev_state.step in ("wait_payment_file", "file_confirmed") and prev_state.questions
+
             try:
-                await bot_client.send_message(
-                    user_id,
-                    f"✅ **To'lov qabul qilindi!**\n\n"
-                    f"💰 +{amount:,} so'm qo'shildi\n"
-                    f"💼 Balans: **{bal:,} so'm**\n\n"
-                    f"Xizmatdan foydalanishingiz mumkin! 👇",
-                    buttons=main_menu(is_admin(user_id), user_id)
-                )
+                if has_pending_file:
+                    q_count = prev_state.total_questions
+                    price   = calc_file_price(q_count)
+                    if bal >= price:
+                        db_deduct_balance(user_id, price, f"Fayl quiz: {q_count} savol")
+                        bal_left = db_get_balance(user_id)
+                        prev_state.step = "ask_fan_name"
+                        user_states[user_id] = prev_state
+                        await bot_client.send_message(
+                            user_id,
+                            f"✅ **To'lov qabul qilindi! +{amount:,} so'm**\n\n"
+                            f"📂 {q_count} ta savol tayyor\n"
+                            f"💰 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
+                            f"Fan nomini yozing:",
+                            buttons=[[Button.text("🔙 Bosh menyu")]]
+                        )
+                    else:
+                        still_need = price - bal
+                        merchant_t = db_create_click_invoice(user_id, still_need)
+                        curl = create_click_url(still_need, merchant_t)
+                        await bot_client.send_message(
+                            user_id,
+                            f"✅ +{amount:,} so'm | Balans: {bal:,} so'm\n"
+                            f"⚠️ Hali yetarli emas. Kerak: {price:,} so'm\n"
+                            f"➖ Yana: **{still_need:,} so'm**",
+                            buttons=[[Button.url(f"💳 CLICK {still_need:,} so'm", curl)]]
+                        )
+                elif has_pending_ai:
+                    await bot_client.send_message(
+                        user_id,
+                        f"✅ **To'lov qabul qilindi! +{amount:,} so'm**\n\n"
+                        f"💼 Balans: **{bal:,} so'm**\n\n"
+                        f"🤖 Oldingi sozlamalar saqlanib qoldi:\n"
+                        f"📚 {prev_state.fan_name}"
+                        f"{f' | 📌 {prev_state.topic}' if prev_state.topic else ''}\n"
+                        f"🔢 {prev_state.q_count} ta | 🎯 {prev_state.difficulty}\n\n"
+                        f"⏳ AI test tuzilmoqda..."
+                    )
+                    try:
+                        qs = await generate_questions(
+                            prev_state.fan_name, prev_state.q_count,
+                            prev_state.lang, prev_state.difficulty, prev_state.topic
+                        )
+                        if not qs:
+                            await bot_client.send_message(user_id, "❌ AI savol yarata olmadi!")
+                        else:
+                            db_deduct_balance(user_id, AI_PRICE, f"AI test: {prev_state.fan_name}")
+                            bal_left = db_get_balance(user_id)
+                            prev_state.questions = qs
+                            prev_state.total_questions = len(qs)
+                            prev_state.per_variant = len(qs)
+                            prev_state.step = "ask_time"
+                            user_states[user_id] = prev_state
+                            await bot_client.send_message(
+                                user_id,
+                                f"✅ **{len(qs)} ta savol tayyor!**\n"
+                                f"💰 Balans: {bal_left:,} so'm\n\n⏱ Vaqt:",
+                                buttons=[[Button.text("⏱ 15s"), Button.text("⏱ 30s")],
+                                         [Button.text("⏱ 60s"), Button.text("⏱ Chegarasiz")]]
+                            )
+                    except Exception as ae:
+                        log.error(f"AI (click to'lovdan keyin): {ae}")
+                        await bot_client.send_message(user_id, f"❌ AI xato: {ae}")
+                else:
+                    tests = bal // AI_PRICE
+                    await bot_client.send_message(
+                        user_id,
+                        f"✅ **To'lov qabul qilindi!**\n\n"
+                        f"💰 +{amount:,} so'm\n"
+                        f"💼 Balans: **{bal:,} so'm**\n"
+                        f"🤖 {tests} ta AI test mumkin 🎉",
+                        buttons=main_menu(is_admin(user_id), user_id)
+                    )
             except Exception as e:
-                log.error(f"Xabar xato: {e}")
+                log.error(f"Click complete xabar xato: {e}")
             await notify_admin(
                 f"💳 **CLICK to'lov**\n\n"
                 f"👤 `{user_id}`\n"
