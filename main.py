@@ -20,7 +20,8 @@ from typing import Optional
 
 from groq import Groq
 from telethon import TelegramClient, events, Button
-from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
+from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, UserNotParticipantError
+from telethon.tl.functions.channels import GetParticipantRequest
 from telethon.tl.functions.messages import SendMediaRequest
 from telethon.tl.types import InputMediaPoll, Poll, PollAnswer, TextWithEntities
 
@@ -393,6 +394,16 @@ def db_init():
             paid_at           TEXT DEFAULT ''
         )
     """)
+    con.execute("""
+        CREATE TABLE IF NOT EXISTS mandatory_subscription (
+            id          INTEGER PRIMARY KEY CHECK (id = 1),
+            enabled     INTEGER DEFAULT 0,
+            chat_ref    TEXT DEFAULT '',
+            invite_link TEXT DEFAULT '',
+            title       TEXT DEFAULT ''
+        )
+    """)
+    con.execute("INSERT OR IGNORE INTO mandatory_subscription (id, enabled, chat_ref, invite_link, title) VALUES (1, 0, '', '', '')")
     con.commit()
     con.close()
 
@@ -1885,6 +1896,56 @@ def db_set_agreed(user_id: int):
     con.commit()
     con.close()
 
+
+def db_set_invited_by(user_id: int, inviter_id: int):
+    con = get_db()
+    con.execute("UPDATE users SET invited_by=? WHERE user_id=? AND (invited_by IS NULL OR invited_by='')", (inviter_id, user_id))
+    con.commit()
+    con.close()
+
+
+def db_get_invited_by(user_id: int) -> Optional[int]:
+    con = get_db()
+    row = con.execute("SELECT invited_by FROM users WHERE user_id=?", (user_id,)).fetchone()
+    con.close()
+    if not row or not row[0]:
+        return None
+    try:
+        return int(row[0])
+    except Exception:
+        return None
+
+
+def db_get_subscription_settings() -> dict:
+    con = get_db()
+    row = con.execute("SELECT enabled, chat_ref, invite_link, title FROM mandatory_subscription WHERE id=1").fetchone()
+    con.close()
+    if not row:
+        return {"enabled": 0, "chat_ref": "", "invite_link": "", "title": ""}
+    return {
+        "enabled": int(row[0] or 0),
+        "chat_ref": row[1] or "",
+        "invite_link": row[2] or "",
+        "title": row[3] or "",
+    }
+
+
+def db_set_subscription_enabled(enabled: bool):
+    con = get_db()
+    con.execute("UPDATE mandatory_subscription SET enabled=? WHERE id=1", (1 if enabled else 0,))
+    con.commit()
+    con.close()
+
+
+def db_set_subscription_target(chat_ref: str, invite_link: str = '', title: str = ''):
+    con = get_db()
+    con.execute(
+        "UPDATE mandatory_subscription SET chat_ref=?, invite_link=?, title=? WHERE id=1",
+        ((chat_ref or '').strip(), (invite_link or '').strip(), (title or '').strip())
+    )
+    con.commit()
+    con.close()
+
 def db_save_referral(inviter_id: int, invited_id: int):
     """Referal munosabatini saqlash"""
     con = get_db()
@@ -2807,6 +2868,67 @@ async def main():
         except Exception as e:
             await event.respond(f"⚠️ Foydalanuvchiga xabar yuborilmadi: {e}")
 
+    async def user_is_subscribed(user_id: int) -> bool:
+        settings = db_get_subscription_settings()
+        if not settings.get("enabled"):
+            return True
+        chat_ref = (settings.get("chat_ref") or "").strip()
+        if not chat_ref:
+            return True
+        try:
+            entity = await bot_client.get_entity(int(chat_ref) if re.fullmatch(r'-?\d+', chat_ref) else chat_ref)
+            await bot_client(GetParticipantRequest(entity, user_id))
+            return True
+        except UserNotParticipantError:
+            return False
+        except Exception as e:
+            log.warning(f"Majburiy a'zolik tekshiruvi xato: {e}")
+            return False
+
+    async def show_subscription_prompt(target_event, uid: int):
+        settings = db_get_subscription_settings()
+        title = settings.get("title") or settings.get("chat_ref") or "kanal/guruh"
+        link = (settings.get("invite_link") or "").strip()
+        buttons = []
+        if link:
+            buttons.append([Button.url("📢 Kanal/guruhga qo'shilish", link)])
+        buttons.append([Button.inline("✅ A'zolikni tekshirish", b"check_subscription")])
+        await target_event.respond(
+            f"📢 **Majburiy a'zolik yoqilgan**\n\n"
+            f"Botdan foydalanish va bonus olish uchun avval **{title}** ga a'zo bo'ling.\n\n"
+            f"A'zo bo'lgach, pastdagi **Tekshirish** tugmasini bosing.",
+            buttons=buttons
+        )
+
+    async def finalize_user_access(uid: int, first_name: str = "", full_name: str = "", uname: str = ""):
+        inviter_id = db_get_invited_by(uid)
+        bonus_msg = ""
+        if inviter_id and inviter_id != uid and not db_already_referred(inviter_id, uid):
+            db_save_referral(inviter_id, uid)
+            db_add_balance(uid, REFERRAL_BONUS, f"Referal bonusi — {inviter_id} taklif qildi")
+            db_add_balance(inviter_id, REFERRAL_BONUS, f"Referal bonusi — {uid} qo'shildi")
+            ref_count = db_get_referral_count(inviter_id)
+            bonus_msg += f"\n\n🎁 **Referal bonusi: +{REFERRAL_BONUS:,} so'm** balansga qo'shildi!"
+            if db_is_partner(inviter_id):
+                db_add_partner_balance(inviter_id, PARTNER_JOIN_BONUS, f"Yangi foydalanuvchi: {uid}")
+                db_partner_add_ref(inviter_id)
+            try:
+                await bot_client.send_message(
+                    inviter_id,
+                    f"🎉 **Yangi referal!**\n\n"
+                    f"👤 **{full_name or first_name or uid}** sizning havolangiz orqali qo'shildi!\n"
+                    f"💰 +{REFERRAL_BONUS:,} so'm balansga qo'shildi\n"
+                    f"👥 Jami referallar: **{ref_count} ta**"
+                )
+            except Exception:
+                pass
+            await notify_admin(
+                f"🎁 **Referal**\n\n"
+                f"👤 {full_name or uid} (`{uid}`) → `{inviter_id}` havolasidan keldi\n"
+                f"💰 Ikkalasiga +{REFERRAL_BONUS:,} so'm"
+            )
+        return bonus_msg
+
     @bot_client.on(events.NewMessage(pattern="/start"))
     async def cmd_start(event):
         uid = event.sender_id
@@ -2944,6 +3066,37 @@ async def main():
             buttons=main_menu(is_admin(uid), uid)
         )
 
+    @bot_client.on(events.CallbackQuery(data=b"check_subscription"))
+    async def on_check_subscription(event):
+        uid = event.sender_id
+        if not db_is_agreed(uid):
+            await event.answer("Avval shartlarga rozilik bering.", alert=True)
+            return
+        if await user_is_subscribed(uid):
+            sender = await event.get_sender()
+            first = getattr(sender, "first_name", "") or ""
+            last = getattr(sender, "last_name", "") or ""
+            uname = getattr(sender, "username", "") or ""
+            full_name = f"{first} {last}".strip() or uname or str(uid)
+            bonus_msg = await finalize_user_access(uid, first, full_name, uname)
+            try:
+                await event.edit(
+                    f"✅ **A'zolik tasdiqlandi!**\n\n"
+                    f"Endi botdan to'liq foydalanishingiz mumkin.{bonus_msg}"
+                )
+            except Exception:
+                pass
+            await bot_client.send_message(
+                uid,
+                f"🏠 **Asosiy menyu**\n\n"
+                f"🤖 AI yordamida istalgan fandan test tuzing!\n"
+                f"📁 Fayl yuklang yoki matn kiriting.",
+                buttons=main_menu(is_admin(uid), uid)
+            )
+        else:
+            await event.answer("Hali a'zo bo'lmagansiz yoki bot tekshira olmadi.", alert=True)
+            await show_subscription_prompt(event, uid)
+
     @bot_client.on(events.NewMessage(func=lambda e: e.file))
     async def on_file(event):
         uid = event.sender_id
@@ -2962,6 +3115,15 @@ async def main():
         # Faqat fayl kutilayotgan holatlarda davom etamiz
         # Boshqa admin holatlarda (masalan wait_phone) — ignore
         astate_step = admin_states.get(uid, {}).get("step", "")
+
+        if not adm:
+            if not db_is_agreed(uid):
+                await event.respond("⚠️ Avval shartlarga rozilik bering.")
+                return
+            settings = db_get_subscription_settings()
+            if settings.get("enabled") and not await user_is_subscribed(uid):
+                await show_subscription_prompt(event, uid)
+                return
 
         # Broadcast — fayl yuborganda ham ishlashi uchun
         if astate_step == "wait_broadcast" and is_admin(uid):
@@ -2991,7 +3153,7 @@ async def main():
             target_id = admin_states[uid].get("target_id")
             admin_states.pop(uid, None)
             try:
-                await bot_client.send_message(target_id, event.message)
+                await bot_client.send_message(int(target_id), text)
                 await event.respond(f"✅ User `{target_id}` ga yuborildi!", buttons=[[Button.text("🔙 Admin panel")]])
             except Exception as e:
                 await event.respond(f"❌ Xato: {e}", buttons=[[Button.text("🔙 Admin panel")]])
@@ -3186,6 +3348,30 @@ async def main():
             await _admin_bonus_user_id(event, uid, text); return
         if astate.get("step") == "wait_bonus_amount":
             await _admin_bonus_amount(event, uid, text); return
+        if astate.get("step") == "wait_subscription_target":
+            if not adm:
+                return
+            if text == "🔙 Admin panel":
+                admin_states.pop(uid, None)
+                await _show_admin(event)
+                return
+            parts = [x.strip() for x in text.split("|")]
+            if len(parts) < 2 or not parts[0] or not parts[1]:
+                await event.respond(
+                    "❌ Format noto'g'ri.\n\nYuboring:\n`chat_ref | invite_link | title`",
+                    buttons=[[Button.text("🔙 Admin panel")]]
+                )
+                return
+            chat_ref = parts[0]
+            invite_link = parts[1]
+            title = parts[2] if len(parts) >= 3 else ""
+            db_set_subscription_target(chat_ref, invite_link, title)
+            admin_states.pop(uid, None)
+            await event.respond(
+                f"✅ Kanal/guruh yangilandi!\n\nChat ref: `{chat_ref}`\nHavola: {invite_link}\nNomi: {title or '-'}",
+                buttons=[[Button.text("📢 Majburiy a'zolik")], [Button.text("🔙 Admin panel")]]
+            )
+            return
 
         # ---- BROADCAST ----
         if astate.get("step") == "wait_broadcast":
@@ -3201,7 +3387,7 @@ async def main():
             prog = await event.respond(f"📤 Yuborilmoqda... 0/{len(all_users)}")
             for i, (target_id,) in enumerate(all_users):
                 try:
-                    await bot_client.send_message(target_id, broadcast_text, parse_mode='md')
+                    await bot_client.send_message(int(target_id), broadcast_text)
                     ok += 1
                 except Exception as e:
                     log.warning(f"Broadcast xato user={target_id}: {e}")
@@ -3244,7 +3430,7 @@ async def main():
             target_id = astate.get("target_id")
             admin_states.pop(uid, None)
             try:
-                await bot_client.send_message(target_id, event.message)
+                await bot_client.send_message(int(target_id), text)
                 await event.respond(f"✅ User `{target_id}` ga xabar yuborildi!", buttons=[[Button.text("🔙 Admin panel")]])
             except Exception as e:
                 await event.respond(f"❌ Xato: {e}", buttons=[[Button.text("🔙 Admin panel")]])
@@ -3270,6 +3456,12 @@ async def main():
                 buttons=agree_buttons
             )
             return
+
+        if not is_admin(uid):
+            settings = db_get_subscription_settings()
+            if settings.get("enabled") and not await user_is_subscribed(uid):
+                await show_subscription_prompt(event, uid)
+                return
 
         # ---- BOSH MENYU KNOPKALARI ----
         if text == "🔙 Bosh menyu":
@@ -3983,6 +4175,7 @@ async def main():
                 [Button.text("📤 Sessiya yuklash"), Button.text("⬇️ DB yuklash")],
                 [Button.text("⬆️ DB yuklash (yangi)"), Button.text("🗑 Navbatni tozalash")],
                 [Button.text("📢 Barchaga xabar"), Button.text("📨 ID ga xabar")],
+                [Button.text("📢 Majburiy a'zolik")],
                 [Button.text("🔙 Bosh menyu")],
             ]
         )
@@ -4135,12 +4328,65 @@ async def main():
                                 "💳 To'lovlar", "📤 Sessiya yuklash",
                                 "⬇️ DB yuklash", "⬆️ DB yuklash (yangi)",
                                 "👀 Faol foydalanuvchilar", "💸 Userga pul yuborish",
-                                "💸 Yana yuborish", "📢 Barchaga xabar", "📨 ID ga xabar"]
+                                "💸 Yana yuborish", "📢 Barchaga xabar", "📨 ID ga xabar", "📢 Majburiy a'zolik", "✅ A'zolikni yoqish", "⛔️ A'zolikni o'chirish", "✏️ Kanal/guruhni almashtirish"]
     ))
     async def admin_btns(event):
         uid = event.sender_id
         adm = is_admin(uid)
         text = event.text.strip()
+
+        if text == "📢 Majburiy a'zolik":
+            s = db_get_subscription_settings()
+            status = "✅ Yoqilgan" if s.get("enabled") else "⛔️ O'chirilgan"
+            target = s.get("title") or s.get("chat_ref") or "sozlanmagan"
+            link = s.get("invite_link") or "yo'q"
+            chat_ref_val = s.get("chat_ref") or "-"
+            await event.respond(
+                f"📢 **Majburiy a'zolik sozlamalari**\n\n"
+                f"Holat: {status}\n"
+                f"Kanal/guruh: **{target}**\n"
+                f"Chat ref: `{chat_ref_val}`\n"
+                f"Havola: {link}\n\n"
+                f"Foydalanuvchi bonus olishi uchun:\n"
+                f"1) Shartlarga rozilik bildiradi\n"
+                f"2) Kanal/guruhga a'zo bo'ladi\n"
+                f"3) Shundan keyin referal/hamkor bonus beriladi",
+                buttons=[
+                    [Button.text("✅ A'zolikni yoqish"), Button.text("⛔️ A'zolikni o'chirish")],
+                    [Button.text("✏️ Kanal/guruhni almashtirish")],
+                    [Button.text("🔙 Admin panel")],
+                ]
+            )
+            return
+
+        if text == "✅ A'zolikni yoqish":
+            s = db_get_subscription_settings()
+            if not s.get("chat_ref"):
+                await event.respond("❌ Avval kanal/guruhni sozlang.", buttons=[[Button.text("✏️ Kanal/guruhni almashtirish")],[Button.text("🔙 Admin panel")]])
+                return
+            db_set_subscription_enabled(True)
+            await event.respond("✅ Majburiy a'zolik yoqildi.", buttons=[[Button.text("📢 Majburiy a'zolik")],[Button.text("🔙 Admin panel")]])
+            return
+
+        if text == "⛔️ A'zolikni o'chirish":
+            db_set_subscription_enabled(False)
+            await event.respond("⛔️ Majburiy a'zolik o'chirildi.", buttons=[[Button.text("📢 Majburiy a'zolik")],[Button.text("🔙 Admin panel")]])
+            return
+
+        if text == "✏️ Kanal/guruhni almashtirish":
+            admin_states[uid] = {"step": "wait_subscription_target"}
+            await event.respond(
+                "✏️ **Kanal/guruhni almashtirish**\n\n"
+                "Bitta xabarda quyidagi formatda yuboring:\n"
+                "`chat_ref | invite_link | title`\n\n"
+                "Misol 1:\n"
+                "`@quiz_import_news | https://t.me/quiz_import_news | Yangiliklar kanali`\n\n"
+                "Misol 2:\n"
+                "`-1001234567890 | https://t.me/+abcxyz | VIP guruh`\n\n"
+                "`title` ixtiyoriy.",
+                buttons=[[Button.text("🔙 Admin panel")]]
+            )
+            return
 
         if text == "👀 Faol foydalanuvchilar":
             if not active_users:
