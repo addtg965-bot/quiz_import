@@ -363,6 +363,7 @@ def db_init():
     migrations = [
         "ALTER TABLE users ADD COLUMN balance INTEGER DEFAULT 0",
         "ALTER TABLE users ADD COLUMN invited_by INTEGER DEFAULT NULL",
+        "ALTER TABLE users ADD COLUMN terms_agreed INTEGER DEFAULT 0",
         """CREATE TABLE IF NOT EXISTS referrals (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             inviter_id  INTEGER NOT NULL,
@@ -1775,6 +1776,9 @@ CLICK_MERCHANT_USER_ID = _os.environ.get("CLICK_MERCHANT_USER_ID", "")
 SERVER_PORT            = int(_os.environ.get("SERVER_PORT", "8080"))
 CLICK_BASE_URL         = "https://my.click.uz/services/pay"
 
+# Bot veb serveri asosiy URL — shartlar sahifalari uchun
+WEB_BASE_URL = _os.environ.get("WEB_BASE_URL", "")  # masalan: https://yourapp.up.railway.app
+
 def create_click_url(amount: int, merchant_trans_id: str) -> str:
     return (
         f"{CLICK_BASE_URL}"
@@ -1862,6 +1866,24 @@ def db_is_new_user(user_id: int) -> bool:
     row = con.execute("SELECT user_id FROM users WHERE user_id=?", (user_id,)).fetchone()
     con.close()
     return row is None
+
+def db_is_agreed(user_id: int) -> bool:
+    """Foydalanuvchi shartlarga rozimi?"""
+    con = get_db()
+    row = con.execute(
+        "SELECT terms_agreed FROM users WHERE user_id=?", (user_id,)
+    ).fetchone()
+    con.close()
+    return bool(row and row[0])
+
+def db_set_agreed(user_id: int):
+    """Rozilikni DB ga saqlash."""
+    con = get_db()
+    con.execute(
+        "UPDATE users SET terms_agreed=1 WHERE user_id=?", (user_id,)
+    )
+    con.commit()
+    con.close()
 
 def db_save_referral(inviter_id: int, invited_id: int):
     """Referal munosabatini saqlash"""
@@ -2844,11 +2866,81 @@ async def main():
                 f"Jami: {total} ta"
             )
 
+        # Shartlarga rozilik tekshirish
+        if not db_is_agreed(uid):
+            # Shartlar havolalari
+            if WEB_BASE_URL:
+                terms_url   = f"{WEB_BASE_URL}/terms"
+                privacy_url = f"{WEB_BASE_URL}/privacy"
+                oferta_url  = f"{WEB_BASE_URL}/oferta"
+                doc_buttons = [
+                    [Button.url("📋 Foydalanish shartlari", terms_url)],
+                    [Button.url("🔒 Maxfiylik siyosati",    privacy_url)],
+                    [Button.url("📄 Ommaviy oferta",         oferta_url)],
+                ]
+            else:
+                doc_buttons = []
+            agree_buttons = doc_buttons + [
+                [Button.inline("✅ Roziman, botdan foydalanaman", b"agree_terms")],
+            ]
+            await event.respond(
+                f"👋 **Salom, {first or 'do\'stim'}!**\n\n"
+                f"🤖 **AI Quiz Bot** ga xush kelibsiz!\n\n"
+                f"Botdan foydalanishdan oldin quyidagi hujjatlarni o'qib, "
+                f"rozilik bildiring:\n\n"
+                f"📋 Foydalanish shartlari\n"
+                f"🔒 Maxfiylik siyosati\n"
+                f"📄 Ommaviy oferta (YATT shartnomasi)\n\n"
+                f"_Hujjatlarni o'qib chiqqach, \"✅ Roziman\" tugmasini bosing._",
+                buttons=agree_buttons
+            )
+            return
+
         await event.respond(
             f"👋 **Salom! AI Quiz Bot**\n\n"
             f"🤖 AI yordamida istalgan fandan test tuzing!\n"
             f"📁 Fayl yuklang yoki matn kiriting{ref_bonus_msg}\n\n"
             f"Boshlash uchun tugmani bosing 👇",
+            buttons=main_menu(is_admin(uid), uid)
+        )
+
+    @bot_client.on(events.CallbackQuery(data=b"agree_terms"))
+    async def on_agree_terms(event):
+        """Foydalanuvchi shartlarga roziligi."""
+        uid = event.sender_id
+        db_set_agreed(uid)
+
+        sender = await event.get_sender()
+        first  = getattr(sender, "first_name", "") or ""
+        last   = getattr(sender, "last_name",  "") or ""
+        uname  = getattr(sender, "username",   "") or ""
+        full_name = f"{first} {last}".strip() or uname or str(uid)
+        db_save_user(user_id=uid, first_name=first, last_name=last, username=uname)
+
+        # Xabarni tahrirlash — rozilik belgisi
+        try:
+            await event.edit(
+                f"✅ **Rozilik tasdiqlandi!**\n\n"
+                f"Xush kelibsiz, **{first or full_name}**! 🎉\n\n"
+                f"Endi botdan to'liq foydalanishingiz mumkin."
+            )
+        except Exception:
+            pass
+
+        # Adminga xabar
+        uname_str = f"@{uname}" if uname else f"`{uid}`"
+        await notify_admin(
+            f"✅ **Yangi foydalanuvchi (rozilik berdi)**\n\n"
+            f"Ism: **{full_name}**\n"
+            f"ID: `{uid}` | {uname_str}"
+        )
+
+        # Asosiy menyuni yuborish
+        await bot_client.send_message(
+            uid,
+            f"🏠 **Asosiy menyu**\n\n"
+            f"🤖 AI yordamida istalgan fandan test tuzing!\n"
+            f"📁 Fayl yuklang yoki matn kiriting.",
             buttons=main_menu(is_admin(uid), uid)
         )
 
@@ -3159,6 +3251,25 @@ async def main():
             return
 
         state = user_states.get(uid, UserState())
+
+        # Shartlarga rozilik tekshirish — admin va /start bundan mustasno
+        if not is_admin(uid) and not db_is_agreed(uid) and text not in ("🔙 Bosh menyu",):
+            if WEB_BASE_URL:
+                agree_buttons = [
+                    [Button.url("📋 Foydalanish shartlari", f"{WEB_BASE_URL}/terms")],
+                    [Button.url("🔒 Maxfiylik siyosati",    f"{WEB_BASE_URL}/privacy")],
+                    [Button.url("📄 Ommaviy oferta",         f"{WEB_BASE_URL}/oferta")],
+                    [Button.inline("✅ Roziman, botdan foydalanaman", b"agree_terms")],
+                ]
+            else:
+                agree_buttons = [
+                    [Button.inline("✅ Roziman, botdan foydalanaman", b"agree_terms")],
+                ]
+            await event.respond(
+                "⚠️ Botdan foydalanish uchun avval shartlarga rozilik bildiring:",
+                buttons=agree_buttons
+            )
+            return
 
         # ---- BOSH MENYU KNOPKALARI ----
         if text == "🔙 Bosh menyu":
