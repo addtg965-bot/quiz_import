@@ -2943,39 +2943,17 @@ async def main():
         db_save_user(user_id=uid, first_name=first, last_name=last, username=uname)
         track_user(uid, full_name, "idle", "/start")
 
-        # Referal tekshirish — /start ref_123456789
+        # Referalni hozircha faqat eslab qolamiz.
+        # Bonus faqat foydalanuvchi shartlarga rozilik berib,
+        # majburiy a'zolik bo'lsa kanal/guruhga ham a'zo bo'lgandan keyin beriladi.
         ref_bonus_msg = ""
         raw = event.raw_text.strip()
         ref_match = re.match(r'^/start\s+ref_(\d+)$', raw)
         if ref_match and is_new:
             inviter_id = int(ref_match.group(1))
-            if inviter_id != uid and not db_already_referred(inviter_id, uid):
-                db_save_referral(inviter_id, uid)
-                db_add_balance(uid, REFERRAL_BONUS, f"Referal bonusi — {inviter_id} taklif qildi")
-                db_add_balance(inviter_id, REFERRAL_BONUS, f"Referal bonusi — {uid} qo'shildi")
-                ref_count = db_get_referral_count(inviter_id)
-                ref_bonus_msg = f"\n\n🎁 **Referal bonus: +{REFERRAL_BONUS:,} so'm** balansga qo'shildi!"
+            if inviter_id != uid:
+                db_set_invited_by(uid, inviter_id)
 
-                # Agar taklif qiluvchi HAMKOR bo'lsa — +50 so'm hamkor balansiga
-                if db_is_partner(inviter_id):
-                    db_add_partner_balance(inviter_id, PARTNER_JOIN_BONUS, f"Yangi foydalanuvchi: {uid}")
-                    db_partner_add_ref(inviter_id)
-
-                try:
-                    await bot_client.send_message(
-                        inviter_id,
-                        f"🎉 **Yangi referal!**\n\n"
-                        f"👤 **{full_name}** sizning havolangiz orqali qo'shildi!\n"
-                        f"💰 +{REFERRAL_BONUS:,} so'm balansga qo'shildi\n"
-                        f"👥 Jami referallar: **{ref_count} ta**"
-                    )
-                except Exception:
-                    pass
-                await notify_admin(
-                    f"🎁 **Referal**\n\n"
-                    f"👤 {full_name} (`{uid}`) → `{inviter_id}` havolasidan keldi\n"
-                    f"💰 Ikkalasiga +{REFERRAL_BONUS:,} so'm"
-                )
 
         # Yangi foydalanuvchi bo'lsa admin ga xabar
         if is_new:
@@ -3018,6 +2996,11 @@ async def main():
             )
             return
 
+        settings = db_get_subscription_settings()
+        if settings.get("enabled") and not await user_is_subscribed(uid):
+            await show_subscription_prompt(event, uid)
+            return
+
         await event.respond(
             f"👋 **Salom! AI Quiz Bot**\n\n"
             f"🤖 AI yordamida istalgan fandan test tuzing!\n"
@@ -3025,6 +3008,7 @@ async def main():
             f"Boshlash uchun tugmani bosing 👇",
             buttons=main_menu(is_admin(uid), uid)
         )
+
 
     @bot_client.on(events.CallbackQuery(data=b"agree_terms"))
     async def on_agree_terms(event):
@@ -3039,16 +3023,6 @@ async def main():
         full_name = f"{first} {last}".strip() or uname or str(uid)
         db_save_user(user_id=uid, first_name=first, last_name=last, username=uname)
 
-        # Xabarni tahrirlash — rozilik belgisi
-        try:
-            await event.edit(
-                f"✅ **Rozilik tasdiqlandi!**\n\n"
-                f"Xush kelibsiz, **{first or full_name}**! 🎉\n\n"
-                f"Endi botdan to'liq foydalanishingiz mumkin."
-            )
-        except Exception:
-            pass
-
         # Adminga xabar
         uname_str = f"@{uname}" if uname else f"`{uid}`"
         await notify_admin(
@@ -3057,12 +3031,34 @@ async def main():
             f"ID: `{uid}` | {uname_str}"
         )
 
-        # Asosiy menyuni yuborish
+        settings = db_get_subscription_settings()
+        if settings.get("enabled"):
+            try:
+                await event.edit(
+                    f"✅ **Rozilik tasdiqlandi!**\n\n"
+                    f"Keyingi qadam: majburiy kanal/guruhga a'zo bo'ling."
+                )
+            except Exception:
+                pass
+            await show_subscription_prompt(event, uid)
+            return
+
+        bonus_msg = await finalize_user_access(uid, first, full_name, uname)
+
+        try:
+            await event.edit(
+                f"✅ **Rozilik tasdiqlandi!**\n\n"
+                f"Xush kelibsiz, **{first or full_name}**! 🎉{bonus_msg}\n\n"
+                f"Endi botdan to'liq foydalanishingiz mumkin."
+            )
+        except Exception:
+            pass
+
         await bot_client.send_message(
             uid,
             f"🏠 **Asosiy menyu**\n\n"
             f"🤖 AI yordamida istalgan fandan test tuzing!\n"
-            f"📁 Fayl yuklang yoki matn kiriting.",
+            f"📁 Fayl yuklang yoki matn kiriting{bonus_msg}",
             buttons=main_menu(is_admin(uid), uid)
         )
 
