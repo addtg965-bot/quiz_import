@@ -3718,23 +3718,26 @@ async def main():
 
         # ---- FILE CONFIRMED — namuna ko'rib bo'lgach ----
         if state.step == "file_confirmed":
-            if text in ("✅ Maqul, davom etamiz", "✅ Maqul, davom etamiz"):
+            if text == "✅ Maqul, davom etamiz":
                 q_count = state.total_questions
                 price   = state.__dict__.get("_price", calc_file_price(q_count))
                 blocks  = (q_count + 24) // 25
                 bal_now = db_get_balance(uid)
                 if bal_now >= price:
+                    # Balans yetarli — to'g'ridan kesib fan nomi so'raymiz
                     db_deduct_balance(uid, price, f"Fayl quiz: {q_count} ta savol")
                     bal_left = db_get_balance(uid)
                     state.step = "ask_fan_name"
                     user_states[uid] = state
                     await event.respond(
-                        f"✅ **To'lov bajarildi!**\n"
-                        f"💰 -{price:,} so'm | Balans: {bal_left:,} so'm\n\n"
-                        f"Fan nomini yozing:",
+                        f"✅ **Xizmat haqqi to'landi!**\n\n"
+                        f"📂 {q_count} ta savol\n"
+                        f"💰 -{price:,} so'm | Qolgan balans: {bal_left:,} so'm\n\n"
+                        f"📚 Fan nomini yozing:",
                         buttons=[[Button.text("🔙 Bosh menyu")]]
                     )
                 else:
+                    # Balans yetarli emas — to'liq ma'lumot + Click tugmasi
                     needed = price - bal_now
                     mtid = db_create_click_invoice(uid, needed)
                     curl = create_click_url(needed, mtid)
@@ -3742,18 +3745,18 @@ async def main():
                     user_states[uid] = state
                     await event.respond(
                         f"📂 **{q_count} ta savol**\n\n"
-                        f"💰 Narx: {blocks} × 1 500 = **{price:,} so'm**\n"
+                        f"💰 Xizmat haqqi: {blocks} × 1 500 = **{price:,} so'm**\n"
                         f"💼 Balansda: {bal_now:,} so'm\n"
                         f"➖ Yetishmaydi: **{needed:,} so'm**\n\n"
-                        f"📌 Savollar saqlanib qoldi!",
+                        f"📌 Savollar saqlanib qoldi — to'lovdan keyin davom etadi!",
                         buttons=[
-                            [Button.url(f"💳 CLICK {needed:,} so'm to'lash", curl)],
+                            [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", curl)],
                             [Button.text("🔙 Bosh menyu")],
                         ]
                     )
                 return
 
-            if text in ("❌ Bekor qilish", "❌ Bekor qilish"):
+            if text == "❌ Bekor qilish":
                 user_states[uid] = UserState()
                 # Admin username/linkni olish
                 bot_me_info = await bot_client.get_me()
@@ -4782,7 +4785,7 @@ async def main():
             tests = bal // AI_PRICE
             prev_state = user_states.get(user_id)
             has_pending_ai   = prev_state and prev_state.step == "wait_payment" and prev_state.fan_name
-            has_pending_file = prev_state and prev_state.step == "wait_payment_file" and prev_state.questions
+            has_pending_file = prev_state and prev_state.step in ("wait_payment_file", "file_confirmed") and prev_state.questions
             if has_pending_file:
                 q_count = prev_state.total_questions
                 price   = calc_file_price(q_count)
@@ -5278,8 +5281,8 @@ async def main():
                     f"\u25b6\ufe0f Quizni sinab ko'ring: {url}\n\n"
                     f"Maqul bo'lsa \u2014 to'lov qilib, butun to'plamni oling \U0001F447",
                     buttons=[
-                        [Button.text("\u2705 Maqul, davom etamiz")],
-                        [Button.text("\u274c Bekor qilish")],
+                        [Button.text("✅ Maqul, davom etamiz")],
+                        [Button.text("❌ Bekor qilish")],
                     ]
                 )
                 state = user_states.get(uid)
