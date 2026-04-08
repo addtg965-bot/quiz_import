@@ -2397,6 +2397,21 @@ async def get_free():
 def release(c): account_busy[id(c)] = False
 def is_admin(uid): return uid in ADMIN_IDS
 
+async def admin_deliver_message(target_id: int, event) -> None:
+    """Admin xabarini userga yuboradi: matn bo'lsa send_message, media bo'lsa forward."""
+    msg = event.message
+    raw_text = (getattr(msg, "message", None) or getattr(event, "raw_text", "") or "").strip()
+
+    if getattr(msg, "media", None):
+        await bot_client.forward_messages(target_id, msg)
+        return
+
+    if raw_text:
+        await bot_client.send_message(target_id, raw_text)
+        return
+
+    raise ValueError("Yuboriladigan xabar bo'sh")
+
 # ============================================================
 #  QUIZ YARATISH (@QuizBot ga yuborish)
 # ============================================================
@@ -2991,7 +3006,7 @@ async def main():
             target_id = admin_states[uid].get("target_id")
             admin_states.pop(uid, None)
             try:
-                await bot_client.send_message(target_id, event.message)
+                await admin_deliver_message(target_id, event)
                 await event.respond(f"✅ User `{target_id}` ga yuborildi!", buttons=[[Button.text("🔙 Admin panel")]])
             except Exception as e:
                 await event.respond(f"❌ Xato: {e}", buttons=[[Button.text("🔙 Admin panel")]])
@@ -3201,7 +3216,7 @@ async def main():
             prog = await event.respond(f"📤 Yuborilmoqda... 0/{len(all_users)}")
             for i, (target_id,) in enumerate(all_users):
                 try:
-                    await bot_client.send_message(target_id, broadcast_text, parse_mode='md')
+                    await bot_client.send_message(target_id, broadcast_text)
                     ok += 1
                 except Exception as e:
                     log.warning(f"Broadcast xato user={target_id}: {e}")
@@ -3244,7 +3259,7 @@ async def main():
             target_id = astate.get("target_id")
             admin_states.pop(uid, None)
             try:
-                await bot_client.send_message(target_id, event.message)
+                await admin_deliver_message(target_id, event)
                 await event.respond(f"✅ User `{target_id}` ga xabar yuborildi!", buttons=[[Button.text("🔙 Admin panel")]])
             except Exception as e:
                 await event.respond(f"❌ Xato: {e}", buttons=[[Button.text("🔙 Admin panel")]])
