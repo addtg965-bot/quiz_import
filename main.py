@@ -3645,7 +3645,6 @@ async def main():
                         f"📌 Sozlamalaringiz saqlanib qoldi — to'lovdan keyin avtomatik davom etadi!",
                         buttons=[
                             [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", click_url)],
-                            [Button.text("🔙 Bosh menyu")],
                         ]
                     )
                     return
@@ -3751,7 +3750,6 @@ async def main():
                         f"📌 Savollar saqlanib qoldi — to'lovdan keyin davom etadi!",
                         buttons=[
                             [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", curl)],
-                            [Button.text("🔙 Bosh menyu")],
                         ]
                     )
                 return
@@ -4668,11 +4666,10 @@ async def main():
             await event.respond(
                 f"💰 **Balans: {bal:,} so'm**\n"
                 f"🤖 AI test uchun kerak: {AI_PRICE:,} so'm\n"
-                f"❌ Yetishmaydi: **{needed:,} so'm**",
+                f"❌ Yetishmaydi: **{needed:,} so'm**\n\n"
+                f"📌 To'lovdan keyin /start bosing — davom etadi.",
                 buttons=[
                     [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", click_url)],
-                    [Button.text("💳 Boshqa summa to'lash")],
-                    [Button.text("🔙 Bosh menyu")],
                 ]
             )
         else:
@@ -5260,8 +5257,7 @@ async def main():
                 f"\u2796 Yetishmaydi: **{needed:,} so'm**\n\n"
                 f"\U0001F4CC Savollar saqlanib qoldi \u2014 to'lovdan keyin davom etadi!",
                 buttons=[
-                    [Button.url(f"\U0001F4B3 CLICK orqali {needed:,} so'm to'lash", curl)],
-                    [Button.text("\U0001F519 Bosh menyu")],
+                    [Button.url(f"💳 CLICK orqali {needed:,} so'm to'lash", curl)],
                 ]
             )
 
